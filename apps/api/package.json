@@ -1,0 +1,8 @@
+{
+  "name": "@memberorg/api",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "dotnet run",
+    "build": "dotnet build"
+  }
+}

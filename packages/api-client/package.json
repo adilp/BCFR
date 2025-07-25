@@ -1,0 +1,8 @@
+{
+  "name": "@memberorg/api-client",
+  "version": "1.0.0",
+  "main": "src/index.ts",
+  "dependencies": {
+    "@memberorg/shared": "1.0.0"
+  }
+}
