@@ -58,26 +58,18 @@ if (app.Environment.IsProduction())
     using (var scope = app.Services.CreateScope())
     {
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
         
         try
         {
-            // Ensure the memberorg schema exists before running migrations
-            dbContext.Database.ExecuteSqlRaw(@"
-                DO $$ 
-                BEGIN
-                    IF NOT EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = 'memberorg') THEN
-                        CREATE SCHEMA memberorg;
-                    END IF;
-                END $$;
-            ");
-            
-            // Now run migrations
+            // Run migrations (schema must be created manually first)
+            logger.LogInformation("Running database migrations...");
             dbContext.Database.Migrate();
+            logger.LogInformation("Database migrations completed successfully.");
         }
         catch (Exception ex)
         {
-            var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-            logger.LogError(ex, "An error occurred while migrating the database.");
+            logger.LogError(ex, "An error occurred while migrating the database. Make sure the 'memberorg' schema has been created manually by running setup-database.sql as the admin user.");
             throw;
         }
     }
