@@ -52,27 +52,12 @@ if (app.Environment.IsDevelopment())
 app.UseCors("AllowAll");
 app.MapControllers();
 
-// Apply migrations automatically in production
+// Do not run migrations automatically in production
+// Migrations must be run manually to avoid permission issues with DigitalOcean's managed PostgreSQL
 if (app.Environment.IsProduction())
 {
-    using (var scope = app.Services.CreateScope())
-    {
-        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-        
-        try
-        {
-            // Run migrations (schema must be created manually first)
-            logger.LogInformation("Running database migrations...");
-            dbContext.Database.Migrate();
-            logger.LogInformation("Database migrations completed successfully.");
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "An error occurred while migrating the database. Make sure the 'memberorg' schema has been created manually by running setup-database.sql as the admin user.");
-            throw;
-        }
-    }
+    var logger = app.Services.GetRequiredService<ILogger<Program>>();
+    logger.LogInformation("Skipping automatic migrations. Run migrations manually using: dotnet ef database update");
 }
 
 app.Run();
