@@ -1,0 +1,23 @@
+# Local Development Only - Does NOT affect production
+version: '3.8'
+
+services:
+  postgres-local:
+    image: postgres:15-alpine
+    container_name: memberorg-postgres-local
+    ports:
+      - "5433:5432"  # Using 5433 to avoid conflicts with any local PostgreSQL
+    environment:
+      POSTGRES_DB: memberorg_local
+      POSTGRES_USER: local_user
+      POSTGRES_PASSWORD: local_password
+    volumes:
+      - postgres_local_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U local_user -d memberorg_local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_local_data:

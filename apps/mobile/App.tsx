@@ -4,13 +4,20 @@ import { useEffect, useState } from 'react';
 import { ApiClient } from '@memberorg/api-client';
 import { APP_NAME } from '@memberorg/shared';
 
-// Use your computer's IP address for physical devices/simulators
-// Update this to your computer's IP address
+// Use your computer's IP address for local development
+// Or use the deployed API URL for production
 const API_URL = Platform.select({
-  ios: 'http://192.168.3.42:5001',     // Your computer's IP
-  android: 'http://192.168.3.42:5001', // Your computer's IP
-  default: 'http://localhost:5001'     // Web
+  ios: 'https://memberorg-app-c4a33.ondigitalocean.app/api',     // Production API
+  android: 'https://memberorg-app-c4a33.ondigitalocean.app/api', // Production API
+  default: 'http://localhost:5001'                               // Web (local)
 });
+
+// For local development, uncomment these lines:
+// const API_URL = Platform.select({
+//   ios: 'http://192.168.3.42:5001',     // Your computer's IP
+//   android: 'http://192.168.3.42:5001', // Your computer's IP
+//   default: 'http://localhost:5001'     // Web
+// });
 
 const apiClient = new ApiClient(API_URL);
 
