@@ -42,7 +42,7 @@ static_sites:
       repo: adilp/BCFR
       branch: main
       deploy_on_push: true
-    build_command: rm -rf node_modules package-lock.json && npm install && npm run build
+    build_command: npm install --force && npm run build
     output_dir: dist
     routes:
     - path: /
