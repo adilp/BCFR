@@ -1,4 +1,4 @@
-import { User } from '@memberorg/shared';
+import type { User } from '@memberorg/shared';
 
 export class ApiClient {
   private baseURL: string;
