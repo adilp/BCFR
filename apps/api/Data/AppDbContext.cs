@@ -16,6 +16,9 @@ public class AppDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
+        // Use a custom schema to avoid public schema permission issues
+        modelBuilder.HasDefaultSchema("memberorg");
+
         // Configure User entity
         modelBuilder.Entity<User>(entity =>
         {
