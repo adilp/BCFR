@@ -2,6 +2,7 @@ import { useState } from 'react'
 import './MembershipPage.css'
 
 const MembershipPage = () => {
+  const [selectedPlan, setSelectedPlan] = useState<'individual' | 'family' | 'student'>('individual')
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -20,7 +21,12 @@ const MembershipPage = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     // Handle form submission here
-    console.log('Form submitted:', formData)
+    const submissionData = {
+      ...formData,
+      membershipPlan: selectedPlan
+    }
+    console.log('Form submitted:', submissionData)
+    // TODO: Send to API
   }
 
   return (
@@ -33,7 +39,6 @@ const MembershipPage = () => {
             <a href="/#about" className="nav-link">About</a>
             <a href="/#events" className="nav-link">Events</a>
             <a href="/membership" className="nav-link">Membership</a>
-            <a href="/#contact" className="nav-link">Contact</a>
             <button className="login-btn">Member Login</button>
           </div>
         </div>
@@ -46,7 +51,10 @@ const MembershipPage = () => {
           <p className="membership-subtitle">Join Birmingham's premier forum for international affairs</p>
 
           <div className="pricing-grid">
-            <div className="pricing-card">
+            <div 
+              className={`pricing-card ${selectedPlan === 'individual' ? 'selected' : ''}`}
+              onClick={() => setSelectedPlan('individual')}
+            >
               <h3 className="pricing-tier">Individual</h3>
               <div className="pricing-amount">
                 <span className="price">$125</span>
@@ -60,7 +68,10 @@ const MembershipPage = () => {
               </ul>
             </div>
 
-            <div className="pricing-card featured">
+            <div 
+              className={`pricing-card featured ${selectedPlan === 'family' ? 'selected' : ''}`}
+              onClick={() => setSelectedPlan('family')}
+            >
               <div className="featured-badge">Most Popular</div>
               <h3 className="pricing-tier">Family</h3>
               <div className="pricing-amount">
@@ -76,7 +87,10 @@ const MembershipPage = () => {
               </ul>
             </div>
 
-            <div className="pricing-card">
+            <div 
+              className={`pricing-card ${selectedPlan === 'student' ? 'selected' : ''}`}
+              onClick={() => setSelectedPlan('student')}
+            >
               <h3 className="pricing-tier">Student</h3>
               <div className="pricing-amount">
                 <span className="price">$25</span>
@@ -103,6 +117,23 @@ const MembershipPage = () => {
             </div>
 
             <form onSubmit={handleSubmit} className="membership-form">
+              {/* Selected Plan Display */}
+              <div className="selected-plan-display">
+                <label>Selected Membership Plan</label>
+                <div className="selected-plan-info">
+                  <span className="plan-name">
+                    {selectedPlan === 'individual' && 'Individual Membership'}
+                    {selectedPlan === 'family' && 'Family Membership'}
+                    {selectedPlan === 'student' && 'Student Membership'}
+                  </span>
+                  <span className="plan-price">
+                    {selectedPlan === 'individual' && '$125/year'}
+                    {selectedPlan === 'family' && '$200/year'}
+                    {selectedPlan === 'student' && '$25/year'}
+                  </span>
+                </div>
+              </div>
+
               <div className="form-row">
                 <div className="form-group">
                   <label htmlFor="firstName">First name</label>

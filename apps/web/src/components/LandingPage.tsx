@@ -13,8 +13,7 @@ const LandingPage = () => {
           <div className="nav-menu">
             <a href="#about" className="nav-link">About</a>
             <a href="#events" className="nav-link">Events</a>
-            <a href="#membership" className="nav-link">Membership</a>
-            <a href="#contact" className="nav-link">Contact</a>
+            <a href="/membership" className="nav-link">Membership</a>
             <button className="login-btn">Member Login</button>
           </div>
         </div>
@@ -136,7 +135,7 @@ const LandingPage = () => {
             </div>
             <div className="footer-section">
               <h4>Get Involved</h4>
-              <a href="#" className="footer-link">Membership</a>
+              <a href="/membership" className="footer-link">Membership</a>
               <a href="#" className="footer-link">Donate</a>
             </div>
             <div className="footer-section">
