@@ -36,7 +36,7 @@ const MembershipPage = () => {
         <div className="nav-container">
           <a href="/" className="logo" style={{ textDecoration: 'none' }}>BCFR</a>
           <div className="nav-menu">
-            <a href="/#about" className="nav-link">About</a>
+            <a href="/about" className="nav-link">About</a>
             <a href="/#events" className="nav-link">Events</a>
             <a href="/membership" className="nav-link">Membership</a>
             <button className="login-btn">Member Login</button>

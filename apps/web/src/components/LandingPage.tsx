@@ -9,9 +9,9 @@ const LandingPage = () => {
       {/* Navigation */}
       <nav className="navbar">
         <div className="nav-container">
-          <div className="logo">BCFR</div>
+          <a href="/" className="logo" style={{ textDecoration: 'none' }}>BCFR</a>
           <div className="nav-menu">
-            <a href="#about" className="nav-link">About</a>
+            <a href="/about" className="nav-link">About</a>
             <a href="#events" className="nav-link">Events</a>
             <a href="/membership" className="nav-link">Membership</a>
             <button className="login-btn">Member Login</button>
@@ -124,9 +124,8 @@ const LandingPage = () => {
           <div className="footer-content">
             <div className="footer-section">
               <h4>About BCFR</h4>
-              <a href="#" className="footer-link">Our Mission</a>
+              <a href="/about" className="footer-link">About</a>
               <a href="#" className="footer-link">Leadership</a>
-              <a href="#" className="footer-link">History</a>
               <a href="#" className="footer-link">Partners</a>
             </div>
             <div className="footer-section">

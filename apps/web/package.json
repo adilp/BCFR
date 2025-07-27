@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@heroicons/react": "^2.2.0",
     "@memberorg/api-client": "1.0.0",
     "@memberorg/shared": "1.0.0",
     "@tanstack/react-router": "^1.130.1",
