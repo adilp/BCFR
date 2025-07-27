@@ -39,7 +39,7 @@ const MembershipPage = () => {
             <a href="/about" className="nav-link">About</a>
             <a href="/#events" className="nav-link">Events</a>
             <a href="/membership" className="nav-link">Membership</a>
-            <button className="login-btn">Member Login</button>
+            <a href="/login" className="login-btn">Member Login</a>
           </div>
         </div>
       </nav>

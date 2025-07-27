@@ -2,6 +2,7 @@ import { createRootRoute, createRouter, createRoute, Outlet } from '@tanstack/re
 import LandingPage from './components/LandingPage'
 import MembershipPage from './components/MembershipPage'
 import AboutPage from './components/AboutPage'
+import LoginPage from './components/LoginPage'
 
 // Create root route
 const rootRoute = createRootRoute({
@@ -29,8 +30,15 @@ const aboutRoute = createRoute({
   component: AboutPage
 })
 
+// Create login page route
+const loginRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/login',
+  component: LoginPage
+})
+
 // Create the route tree
-const routeTree = rootRoute.addChildren([indexRoute, membershipRoute, aboutRoute])
+const routeTree = rootRoute.addChildren([indexRoute, membershipRoute, aboutRoute, loginRoute])
 
 // Create the router
 export const router = createRouter({ routeTree })
