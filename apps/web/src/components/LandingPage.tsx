@@ -1,9 +1,7 @@
-import { useState } from 'react'
 import './LandingPage.css'
 import { GlobeAltIcon, UserGroupIcon, AcademicCapIcon } from '@heroicons/react/24/solid'
 
 const LandingPage = () => {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   return (
     <>
