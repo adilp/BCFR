@@ -133,16 +133,11 @@ const LandingPage = () => {
             <div className="footer-section">
               <h4>Programs</h4>
               <a href="#" className="footer-link">Speaker Series</a>
-              <a href="#" className="footer-link">Study Groups</a>
-              <a href="#" className="footer-link">Young Professionals</a>
-              <a href="#" className="footer-link">Educational Outreach</a>
             </div>
             <div className="footer-section">
               <h4>Get Involved</h4>
               <a href="#" className="footer-link">Membership</a>
               <a href="#" className="footer-link">Donate</a>
-              <a href="#" className="footer-link">Volunteer</a>
-              <a href="#" className="footer-link">Newsletter</a>
             </div>
             <div className="footer-section">
               <h4>Contact</h4>
@@ -155,7 +150,7 @@ const LandingPage = () => {
             </div>
           </div>
           <div className="footer-bottom">
-            <p>&copy; 2024 Birmingham Committee on Foreign Relations. All rights reserved.</p>
+            <p>&copy; 2025 Birmingham Committee on Foreign Relations. All rights reserved.</p>
           </div>
         </div>
       </footer>
