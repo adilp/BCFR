@@ -31,7 +31,7 @@ const LandingPage = () => {
           <h1 className="hero-title">Birmingham Committee on Foreign Relations</h1>
           <p className="hero-subtitle">Connecting Birmingham to the World Through Informed Dialogue since 1943</p>
           <div className="hero-cta">
-            <a href="#membership" className="btn-primary">Become a Member</a>
+            <a href="/membership" className="btn-primary">Become a Member</a>
             <a href="#events" className="btn-secondary">View Events</a>
           </div>
         </div>
@@ -115,7 +115,7 @@ const LandingPage = () => {
             <h2 className="section-title">Join Our Global Community</h2>
             <p className="section-subtitle">Become part of Birmingham's window to the world</p>
           </div>
-          <a href="#" className="btn-primary cta-btn">Apply for Membership</a>
+          <a href="/membership" className="btn-primary cta-btn">Apply for Membership</a>
         </div>
       </section>
 
