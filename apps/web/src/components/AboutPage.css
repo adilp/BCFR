@@ -7,8 +7,8 @@
 .mission-section {
   background-color: var(--primary-purple-dark);
   color: white;
-  padding: var(--space-xxxl) 0;
-  padding-top: calc(80px + var(--space-xxxl)); /* Account for fixed navbar */
+  padding: 6rem 0 8rem 0; /* Large padding top and extra large bottom */
+  padding-top: calc(80px + 6rem); /* Account for fixed navbar */
   position: relative;
   overflow: hidden;
 }
@@ -48,7 +48,7 @@
 
 /* Values Section */
 .values-section {
-  padding: var(--space-xxxl) 0;
+  padding: 4rem 0;
   background-color: var(--bg-white);
 }
 
@@ -135,7 +135,7 @@
 
 /* History Section */
 .history-section {
-  padding: var(--space-xxxl) 0;
+  padding: 4rem 0;
   background-color: var(--bg-light-gray);
 }
 
@@ -208,8 +208,8 @@
 
 /* Impact Section */
 .impact-section {
-  padding: var(--space-xxxl) 0;
-  padding-bottom: calc(var(--space-xxxl) * 2);
+  padding: 4rem 0;
+  padding-bottom: 8rem;
   background-color: var(--bg-white);
 }
 
@@ -252,8 +252,8 @@
 
 /* CTA Section */
 .about-cta-section {
-  padding: calc(var(--space-xxxl) * 1.5) 0;
-  padding-bottom: calc(var(--space-xxxl) * 2);
+  padding: 6rem 0;
+  padding-bottom: 8rem;
   background-color: var(--primary-purple);
   text-align: center;
   color: white;

@@ -20,9 +20,6 @@ const AboutPage = () => {
       {/* Mission Section */}
       <section className="mission-section">
         <div className="mission-container">
-          <div className="sparkle-decoration">✨</div>
-          <div className="diamond-decoration">◆</div>
-          
           <h1 className="mission-title">
             BCFR is on a mission to connect
             <br />Birmingham to the world through
