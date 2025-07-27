@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import './LandingPage.css'
+import { GlobeAltIcon, UserGroupIcon, AcademicCapIcon } from '@heroicons/react/24/solid'
 
 const LandingPage = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -46,17 +47,23 @@ const LandingPage = () => {
 
           <div className="features-grid">
             <div className="feature-card">
-              <div className="feature-icon">🌍</div>
+              <div className="feature-icon">
+                <GlobeAltIcon className="feature-icon-svg" />
+              </div>
               <h3 className="feature-title">Global Perspectives</h3>
               <p className="feature-description">Engage with world-renowned speakers and experts on critical international issues</p>
             </div>
             <div className="feature-card">
-              <div className="feature-icon">🤝</div>
+              <div className="feature-icon">
+                <UserGroupIcon className="feature-icon-svg" />
+              </div>
               <h3 className="feature-title">Community Connection</h3>
               <p className="feature-description">Network with Birmingham's leaders in business, education, and civic affairs</p>
             </div>
             <div className="feature-card">
-              <div className="feature-icon">📚</div>
+              <div className="feature-icon">
+                <AcademicCapIcon className="feature-icon-svg" />
+              </div>
               <h3 className="feature-title">Educational Programs</h3>
               <p className="feature-description">Access exclusive briefings, discussions, and educational resources</p>
             </div>

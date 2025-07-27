@@ -263,7 +263,12 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 2rem;
+}
+
+.feature-icon-svg {
+  width: 2rem;
+  height: 2rem;
+  color: var(--primary-blue);
 }
 
 .feature-title {
