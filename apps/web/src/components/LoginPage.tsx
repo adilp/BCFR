@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import './LoginPage.css'
+import Navigation from './Navigation'
 
 const LoginPage = () => {
   const [formData, setFormData] = useState({
@@ -23,18 +24,7 @@ const LoginPage = () => {
 
   return (
     <div className="login-page">
-      {/* Navigation */}
-      <nav className="navbar">
-        <div className="nav-container">
-          <a href="/" className="logo" style={{ textDecoration: 'none' }}>BCFR</a>
-          <div className="nav-menu">
-            <a href="/about" className="nav-link">About</a>
-            <a href="/#events" className="nav-link">Events</a>
-            <a href="/membership" className="nav-link">Membership</a>
-            <a href="/login" className="login-btn">Member Login</a>
-          </div>
-        </div>
-      </nav>
+      <Navigation />
 
       <div className="login-container">
         <div className="login-form-section">

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import './MembershipPage.css'
+import Navigation from './Navigation'
 
 const MembershipPage = () => {
   const [selectedPlan, setSelectedPlan] = useState<'individual' | 'family' | 'student'>('individual')
@@ -31,18 +32,7 @@ const MembershipPage = () => {
 
   return (
     <div className="membership-page">
-      {/* Navigation */}
-      <nav className="navbar">
-        <div className="nav-container">
-          <a href="/" className="logo" style={{ textDecoration: 'none' }}>BCFR</a>
-          <div className="nav-menu">
-            <a href="/about" className="nav-link">About</a>
-            <a href="/#events" className="nav-link">Events</a>
-            <a href="/membership" className="nav-link">Membership</a>
-            <a href="/login" className="login-btn">Member Login</a>
-          </div>
-        </div>
-      </nav>
+      <Navigation />
 
       <div className="membership-container">
         {/* Pricing Section */}
