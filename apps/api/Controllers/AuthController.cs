@@ -12,7 +12,7 @@ using Microsoft.AspNetCore.Authorization;
 namespace MemberOrgApi.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("[controller]")]
 public class AuthController : ControllerBase
 {
     private readonly AppDbContext _context;
