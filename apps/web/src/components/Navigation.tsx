@@ -1,8 +1,12 @@
 import { useState } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import './Navigation.css'
+import { useAuth } from '../contexts/AuthContext'
 
 const Navigation = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const { user, isAuthenticated, logout } = useAuth()
+  const navigate = useNavigate()
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen)
@@ -10,6 +14,15 @@ const Navigation = () => {
 
   const closeMobileMenu = () => {
     setIsMobileMenuOpen(false)
+  }
+
+  const handleLogout = async () => {
+    try {
+      await logout()
+      navigate({ to: '/login' })
+    } catch (error) {
+      console.error('Logout failed:', error)
+    }
   }
 
   return (
@@ -23,7 +36,14 @@ const Navigation = () => {
             <a href="/about" className="nav-link">About</a>
             <a href="#events" className="nav-link">Events</a>
             <a href="/membership" className="nav-link">Membership</a>
-            <a href="/login" className="login-btn">Member Login</a>
+            {isAuthenticated ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <span style={{ color: '#333' }}>Hi, {user?.firstName}!</span>
+                <button onClick={handleLogout} className="login-btn">Logout</button>
+              </div>
+            ) : (
+              <a href="/login" className="login-btn">Member Login</a>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -45,7 +65,14 @@ const Navigation = () => {
           <a href="/about" className="mobile-nav-link" onClick={closeMobileMenu}>About</a>
           <a href="#events" className="mobile-nav-link" onClick={closeMobileMenu}>Events</a>
           <a href="/membership" className="mobile-nav-link" onClick={closeMobileMenu}>Membership</a>
-          <a href="/login" className="mobile-login-btn" onClick={closeMobileMenu}>Member Login</a>
+          {isAuthenticated ? (
+            <>
+              <div style={{ padding: '0.5rem 1rem', color: '#666' }}>Hi, {user?.firstName}!</div>
+              <button onClick={() => { handleLogout(); closeMobileMenu(); }} className="mobile-login-btn">Logout</button>
+            </>
+          ) : (
+            <a href="/login" className="mobile-login-btn" onClick={closeMobileMenu}>Member Login</a>
+          )}
         </div>
       </nav>
 

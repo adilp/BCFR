@@ -1,12 +1,18 @@
 import { useState } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import './LoginPage.css'
 import Navigation from './Navigation'
+import { useAuth } from '../contexts/AuthContext'
 
 const LoginPage = () => {
+  const navigate = useNavigate()
+  const { login } = useAuth()
   const [formData, setFormData] = useState({
-    email: '',
+    username: '',
     password: ''
   })
+  const [error, setError] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -14,12 +20,25 @@ const LoginPage = () => {
       ...prev,
       [name]: value
     }))
+    setError('') // Clear error when user types
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Handle login here
-    console.log('Login submitted:', formData)
+    setError('')
+    setIsLoading(true)
+
+    try {
+      await login({
+        username: formData.username,
+        password: formData.password
+      })
+      navigate({ to: '/' })
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Login failed. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -31,16 +50,23 @@ const LoginPage = () => {
           <h1 className="login-title">Sign in</h1>
 
           <form onSubmit={handleSubmit} className="login-form">
+            {error && (
+              <div className="error-message" style={{ color: 'red', marginBottom: '1rem' }}>
+                {error}
+              </div>
+            )}
+            
             <div className="form-group">
-              <label htmlFor="email">E-mail</label>
+              <label htmlFor="username">Username</label>
               <input
-                type="email"
-                id="email"
-                name="email"
-                value={formData.email}
+                type="text"
+                id="username"
+                name="username"
+                value={formData.username}
                 onChange={handleInputChange}
-                placeholder="your.email@example.com"
+                placeholder="Enter your username"
                 required
+                disabled={isLoading}
               />
             </div>
 
@@ -54,18 +80,19 @@ const LoginPage = () => {
                 onChange={handleInputChange}
                 placeholder="••••••••••••"
                 required
+                disabled={isLoading}
               />
             </div>
 
-            <button type="submit" className="signin-btn">
-              Sign in
+            <button type="submit" className="signin-btn" disabled={isLoading}>
+              {isLoading ? 'Signing in...' : 'Sign in'}
             </button>
           </form>
 
           <a href="#" className="forgot-password">Forgot password?</a>
 
           <p className="signup-prompt">
-            Not a member yet? <a href="/membership">Sign up</a>
+            Not a member yet? <a href="/register">Sign up</a>
           </p>
         </div>
 
