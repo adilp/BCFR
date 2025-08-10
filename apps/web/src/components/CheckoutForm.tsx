@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { stripePromise } from '../lib/stripe';
 import { API_URL } from '../config';
 
@@ -8,8 +8,31 @@ interface CheckoutFormProps {
   onError?: (error: string) => void;
 }
 
+interface FeeCalculation {
+  basePrice: number;
+  processingFee: number;
+  total: number;
+}
+
 const CheckoutForm = ({ membershipTier, onSuccess, onError }: CheckoutFormProps) => {
   const [isLoading, setIsLoading] = useState(false);
+  const [fees, setFees] = useState<FeeCalculation | null>(null);
+
+  useEffect(() => {
+    // Fetch fee calculation when component mounts or tier changes
+    const fetchFees = async () => {
+      try {
+        const response = await fetch(`${API_URL}/stripe/calculate-fees/${membershipTier}`);
+        if (response.ok) {
+          const data = await response.json();
+          setFees(data);
+        }
+      } catch (error) {
+        console.error('Error fetching fees:', error);
+      }
+    };
+    fetchFees();
+  }, [membershipTier]);
 
   const handleCheckout = async () => {
     setIsLoading(true);
@@ -70,17 +93,17 @@ const CheckoutForm = ({ membershipTier, onSuccess, onError }: CheckoutFormProps)
   const getTierDetails = () => {
     switch (membershipTier) {
       case 'over40':
-        return { name: 'Over 40 Membership', price: '$300/year' };
+        return { name: 'Over 40 Membership' };
       case 'under40':
-        return { name: 'Under 40 Membership', price: '$200/year' };
+        return { name: 'Under 40 Membership' };
       case 'student':
-        return { name: 'Student Membership', price: '$75/year' };
+        return { name: 'Student Membership' };
       default:
-        return { name: '', price: '' };
+        return { name: '' };
     }
   };
 
-  const { name, price } = getTierDetails();
+  const { name } = getTierDetails();
 
   return (
     <div style={{
@@ -99,26 +122,46 @@ const CheckoutForm = ({ membershipTier, onSuccess, onError }: CheckoutFormProps)
         marginBottom: '1rem'
       }}>
         <p><strong>Selected Plan:</strong> {name}</p>
-        <p><strong>Annual Price:</strong> {price}</p>
+        {fees && (
+          <>
+            <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e0e0e0' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                <span>Annual Membership:</span>
+                <span>${fees.basePrice.toFixed(2)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', color: '#666', fontSize: '0.95rem' }}>
+                <span>Processing Fee (one-time):</span>
+                <span>${fees.processingFee.toFixed(2)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', paddingTop: '0.5rem', borderTop: '1px solid #e0e0e0' }}>
+                <span>Total First Payment:</span>
+                <span>${fees.total.toFixed(2)}</span>
+              </div>
+            </div>
+            <p style={{ marginTop: '1rem', fontSize: '0.85rem', color: '#666', fontStyle: 'italic' }}>
+              * Processing fee covers payment processing costs. This fee applies to all payments including annual renewals.
+            </p>
+          </>
+        )}
       </div>
 
       <button
         onClick={handleCheckout}
-        disabled={isLoading}
+        disabled={isLoading || !fees}
         style={{
           width: '100%',
           padding: '1rem',
-          backgroundColor: isLoading ? '#ccc' : '#4263EB',
+          backgroundColor: isLoading || !fees ? '#ccc' : '#4263EB',
           color: 'white',
           border: 'none',
           borderRadius: '4px',
           fontSize: '1rem',
           fontWeight: 'bold',
-          cursor: isLoading ? 'default' : 'pointer',
+          cursor: isLoading || !fees ? 'default' : 'pointer',
           transition: 'background-color 0.2s'
         }}
       >
-        {isLoading ? 'Processing...' : 'Proceed to Payment'}
+        {isLoading ? 'Processing...' : fees ? `Pay $${fees.total.toFixed(2)} Now` : 'Loading...'}
       </button>
 
       <p style={{

@@ -144,6 +144,9 @@ const MembershipPage = () => {
               <div className="pricing-amount">
                 <span className="price">$300</span>
                 <span className="period">/year</span>
+                <span style={{ fontSize: '0.75rem', color: '#666', display: 'block', marginTop: '0.25rem' }}>
+                  + processing fee
+                </span>
               </div>
               <ul className="pricing-features">
                 <li>✓ Access to all speaker events</li>
@@ -175,6 +178,9 @@ const MembershipPage = () => {
               <div className="pricing-amount">
                 <span className="price">$200</span>
                 <span className="period">/year</span>
+                <span style={{ fontSize: '0.75rem', color: '#666', display: 'block', marginTop: '0.25rem' }}>
+                  + processing fee
+                </span>
               </div>
               <ul className="pricing-features">
                 <li>✓ Access to all speaker events</li>
@@ -206,6 +212,9 @@ const MembershipPage = () => {
               <div className="pricing-amount">
                 <span className="price">$75</span>
                 <span className="period">/year</span>
+                <span style={{ fontSize: '0.75rem', color: '#666', display: 'block', marginTop: '0.25rem' }}>
+                  + processing fee
+                </span>
               </div>
               <ul className="pricing-features">
                 <li>✓ Access to all speaker events</li>
