@@ -3,6 +3,7 @@ import { useNavigate } from '@tanstack/react-router'
 import './MembershipPage.css'
 import Navigation from './Navigation'
 import { useAuth } from '../contexts/AuthContext'
+import CheckoutForm from './CheckoutForm'
 
 const MembershipPage = () => {
   const navigate = useNavigate()
@@ -21,6 +22,7 @@ const MembershipPage = () => {
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [age, setAge] = useState<number | null>(null)
+  const [isRegistered, setIsRegistered] = useState(false)
 
   // Calculate age from date of birth
   const calculateAge = (dob: string): number => {
@@ -93,12 +95,8 @@ const MembershipPage = () => {
         dateOfBirth: formData.dateOfBirth || undefined
       })
       
-      // TODO: After successful registration, save membership plan preference
-      // This could be stored in user profile or sent to a separate API endpoint
-      console.log('Membership plan selected:', selectedPlan)
-      
-      // Navigate to home after successful registration
-      navigate({ to: '/' })
+      // After successful registration, show the checkout form
+      setIsRegistered(true)
     } catch (err: any) {
       setError(err.response?.data?.message || 'Registration failed. Please try again.')
     } finally {
@@ -260,14 +258,16 @@ const MembershipPage = () => {
         {/* Application Form Section */}
         <section className="application-section">
           <div className="form-container">
-            <div className="form-header">
-              <h2>Create Your Account</h2>
-              <p className="form-subtitle">
-                Register to become a member of Birmingham Council on Foreign Relations
-              </p>
-            </div>
+            {!isRegistered ? (
+              <>
+                <div className="form-header">
+                  <h2>Create Your Account</h2>
+                  <p className="form-subtitle">
+                    Register to become a member of Birmingham Council on Foreign Relations
+                  </p>
+                </div>
 
-            <form onSubmit={handleSubmit} className="membership-form">
+                <form onSubmit={handleSubmit} className="membership-form">
               {error && (
                 <div className="error-message" style={{ color: 'red', marginBottom: '1rem' }}>
                   {error}
@@ -434,9 +434,26 @@ const MembershipPage = () => {
               )}
             </form>
 
-            <p className="form-footer">
-              Already have an account? <a href="/login">Sign in</a>
-            </p>
+                <p className="form-footer">
+                  Already have an account? <a href="/login">Sign in</a>
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="form-header">
+                  <h2>Complete Your Membership</h2>
+                  <p className="form-subtitle">
+                    Your account has been created successfully! Now complete your membership payment.
+                  </p>
+                </div>
+                {selectedPlan && (
+                  <CheckoutForm 
+                    membershipTier={selectedPlan}
+                    onError={(error) => setError(error)}
+                  />
+                )}
+              </>
+            )}
           </div>
 
           {/* Side illustration */}

@@ -3,6 +3,8 @@ using MemberOrgApi.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using MemberOrgApi.Models;
+using MemberOrgApi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -85,6 +87,10 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 builder.Services.AddAuthorization();
+
+// Configure Stripe
+builder.Services.Configure<StripeSettings>(builder.Configuration.GetSection("Stripe"));
+builder.Services.AddScoped<IStripeService, StripeService>();
 
 var app = builder.Build();
 
