@@ -47,8 +47,8 @@ namespace MemberOrgApi.Services
                     }
                 },
                 Mode = "subscription",
-                SuccessUrl = "https://memberorg-app-c4a33.ondigitalocean.app/membership/success?session_id={CHECKOUT_SESSION_ID}",
-                CancelUrl = "https://memberorg-app-c4a33.ondigitalocean.app/membership",
+                SuccessUrl = "https://birminghamforeignrelations.org/membership/success?session_id={CHECKOUT_SESSION_ID}",
+                CancelUrl = "https://birminghamforeignrelations.org/membership",
                 CustomerEmail = email,
                 Metadata = new Dictionary<string, string>
                 {
