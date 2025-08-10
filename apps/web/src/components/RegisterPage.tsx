@@ -13,7 +13,8 @@ const RegisterPage = () => {
     password: '',
     confirmPassword: '',
     firstName: '',
-    lastName: ''
+    lastName: '',
+    dateOfBirth: ''
   })
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -45,7 +46,8 @@ const RegisterPage = () => {
         email: formData.email,
         password: formData.password,
         firstName: formData.firstName,
-        lastName: formData.lastName
+        lastName: formData.lastName,
+        dateOfBirth: formData.dateOfBirth || undefined
       })
       navigate({ to: '/' })
     } catch (err: any) {
@@ -122,6 +124,19 @@ const RegisterPage = () => {
                 onChange={handleInputChange}
                 placeholder="Your last name"
                 required
+                disabled={isLoading}
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="dateOfBirth">Date of Birth</label>
+              <input
+                type="date"
+                id="dateOfBirth"
+                name="dateOfBirth"
+                value={formData.dateOfBirth}
+                onChange={handleInputChange}
+                max={new Date().toISOString().split('T')[0]}
                 disabled={isLoading}
               />
             </div>

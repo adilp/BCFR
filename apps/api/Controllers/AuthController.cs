@@ -50,7 +50,8 @@ public class AuthController : ControllerBase
                 Email = request.Email,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
                 FirstName = request.FirstName,
-                LastName = request.LastName
+                LastName = request.LastName,
+                DateOfBirth = request.DateOfBirth
             };
 
             _context.Users.Add(user);
@@ -184,7 +185,8 @@ public class AuthController : ControllerBase
                 Username = user.Username,
                 Email = user.Email,
                 FirstName = user.FirstName,
-                LastName = user.LastName
+                LastName = user.LastName,
+                DateOfBirth = user.DateOfBirth
             });
         }
         catch (Exception ex)
