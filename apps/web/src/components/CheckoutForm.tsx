@@ -16,7 +16,7 @@ const CheckoutForm = ({ membershipTier, onSuccess, onError }: CheckoutFormProps)
 
     try {
       // Get auth token from localStorage
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('authToken');
       if (!token) {
         throw new Error('Please log in to continue');
       }
