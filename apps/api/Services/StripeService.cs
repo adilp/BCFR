@@ -263,18 +263,23 @@ namespace MemberOrgApi.Services
             if (invoice == null) return;
             
             // Only process subscription renewal invoices (not the first invoice)
-            if (string.IsNullOrEmpty(invoice.SubscriptionId) || invoice.BillingReason != "subscription_cycle")
+            // Check if this is a subscription invoice and if it's for a renewal (not the first invoice)
+            var isSubscriptionInvoice = invoice.Lines?.Data?.Any(line => !string.IsNullOrEmpty(line.SubscriptionId)) ?? false;
+            
+            if (!isSubscriptionInvoice || invoice.BillingReason != "subscription_cycle")
             {
                 _logger.LogInformation($"Skipping invoice {invoice.Id} - not a subscription renewal");
                 return;
             }
 
-            _logger.LogInformation($"Processing renewal invoice {invoice.Id} for subscription {invoice.SubscriptionId}");
+            var subscriptionId = invoice.Lines?.Data?.FirstOrDefault()?.SubscriptionId;
+            _logger.LogInformation($"Processing renewal invoice {invoice.Id} for subscription {subscriptionId}");
 
             try
             {
                 // Calculate the subscription amount and processing fee
-                var subscriptionAmount = (invoice.Subtotal ?? 0) / 100m; // Convert from cents to dollars
+                // Subtotal is already a long (in cents), not nullable
+                var subscriptionAmount = invoice.Subtotal / 100m; // Convert from cents to dollars
                 var processingFee = Math.Round((subscriptionAmount * 0.029m) + 0.30m, 2);
                 var processingFeeCents = (long)(processingFee * 100);
 
