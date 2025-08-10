@@ -22,7 +22,7 @@ if (builder.Environment.IsProduction())
         // Parse DATABASE_URL format: postgresql://user:password@host:port/database
         var uri = new Uri(databaseUrl);
         var userInfo = uri.UserInfo.Split(':');
-        connectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;Trust Server Certificate=true";
+        connectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;Trust Server Certificate=true;Search Path=memberorg,public";
     }
 }
 
@@ -31,6 +31,11 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     {
         // Configure the migrations history table to use our custom schema
         npgsqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "memberorg");
+        // Set default schema for production
+        if (builder.Environment.IsProduction())
+        {
+            npgsqlOptions.SetPostgresVersion(new Version(15, 0));
+        }
     }));
 
 // Add CORS
