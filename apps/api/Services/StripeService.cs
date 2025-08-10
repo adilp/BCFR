@@ -1,7 +1,9 @@
 using Stripe;
 using Stripe.Checkout;
 using MemberOrgApi.Models;
+using MemberOrgApi.Data;
 using Microsoft.Extensions.Options;
+using Microsoft.EntityFrameworkCore;
 
 namespace MemberOrgApi.Services
 {
@@ -17,11 +19,13 @@ namespace MemberOrgApi.Services
     {
         private readonly StripeSettings _stripeSettings;
         private readonly ILogger<StripeService> _logger;
+        private readonly IServiceScopeFactory _scopeFactory;
 
-        public StripeService(IOptions<StripeSettings> stripeSettings, ILogger<StripeService> logger)
+        public StripeService(IOptions<StripeSettings> stripeSettings, ILogger<StripeService> logger, IServiceScopeFactory scopeFactory)
         {
             _stripeSettings = stripeSettings.Value;
             _logger = logger;
+            _scopeFactory = scopeFactory;
             StripeConfiguration.ApiKey = _stripeSettings.SecretKey;
         }
 
@@ -116,14 +120,55 @@ namespace MemberOrgApi.Services
             
             _logger.LogInformation($"Payment successful for session {session.Id}");
             
-            var userId = session.Metadata["userId"];
+            if (!session.Metadata.TryGetValue("userId", out var userIdStr) || 
+                !int.TryParse(userIdStr, out var userId))
+            {
+                _logger.LogError($"Invalid or missing userId in session metadata");
+                return;
+            }
+
             var membershipTier = session.Metadata["membershipTier"];
             var subscriptionId = session.SubscriptionId;
-            
-            // TODO: Update user's subscription status in database
-            // You'll need to inject your database context here and update the user's subscription
-            
-            await Task.CompletedTask;
+            var customerId = session.CustomerId;
+
+            // Get subscription details from Stripe
+            var subscriptionService = new SubscriptionService();
+            var subscription = await subscriptionService.GetAsync(subscriptionId);
+
+            // Create a new scope for database operations
+            using var scope = _scopeFactory.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            // Check if subscription already exists
+            var existingSubscription = await dbContext.MembershipSubscriptions
+                .FirstOrDefaultAsync(s => s.StripeSubscriptionId == subscriptionId);
+
+            if (existingSubscription != null)
+            {
+                _logger.LogInformation($"Subscription {subscriptionId} already exists in database");
+                return;
+            }
+
+            // Create new subscription record
+            var membershipSubscription = new MembershipSubscription
+            {
+                UserId = userId,
+                MembershipTier = membershipTier,
+                StripeCustomerId = customerId,
+                StripeSubscriptionId = subscriptionId,
+                Status = subscription.Status,
+                StartDate = subscription.StartDate,
+                EndDate = subscription.CurrentPeriodEnd,
+                NextBillingDate = subscription.CurrentPeriodEnd,
+                Amount = subscription.Items.Data[0].Price.UnitAmountDecimal / 100 ?? 0,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            dbContext.MembershipSubscriptions.Add(membershipSubscription);
+            await dbContext.SaveChangesAsync();
+
+            _logger.LogInformation($"Subscription {subscriptionId} saved to database for user {userId}");
         }
 
         private async Task HandleSubscriptionDeleted(Stripe.Subscription? subscription)
@@ -132,9 +177,21 @@ namespace MemberOrgApi.Services
             
             _logger.LogInformation($"Subscription cancelled: {subscription.Id}");
             
-            // TODO: Update user's subscription status in database
-            
-            await Task.CompletedTask;
+            using var scope = _scopeFactory.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            var membershipSubscription = await dbContext.MembershipSubscriptions
+                .FirstOrDefaultAsync(s => s.StripeSubscriptionId == subscription.Id);
+
+            if (membershipSubscription != null)
+            {
+                membershipSubscription.Status = "cancelled";
+                membershipSubscription.EndDate = DateTime.UtcNow;
+                membershipSubscription.UpdatedAt = DateTime.UtcNow;
+                
+                await dbContext.SaveChangesAsync();
+                _logger.LogInformation($"Subscription {subscription.Id} marked as cancelled in database");
+            }
         }
 
         private async Task HandleSubscriptionUpdated(Stripe.Subscription? subscription)
@@ -143,9 +200,21 @@ namespace MemberOrgApi.Services
             
             _logger.LogInformation($"Subscription updated: {subscription.Id}");
             
-            // TODO: Handle subscription updates (e.g., renewal, payment failure)
-            
-            await Task.CompletedTask;
+            using var scope = _scopeFactory.CreateScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            var membershipSubscription = await dbContext.MembershipSubscriptions
+                .FirstOrDefaultAsync(s => s.StripeSubscriptionId == subscription.Id);
+
+            if (membershipSubscription != null)
+            {
+                membershipSubscription.Status = subscription.Status;
+                membershipSubscription.NextBillingDate = subscription.CurrentPeriodEnd;
+                membershipSubscription.UpdatedAt = DateTime.UtcNow;
+                
+                await dbContext.SaveChangesAsync();
+                _logger.LogInformation($"Subscription {subscription.Id} updated in database with status: {subscription.Status}");
+            }
         }
     }
 }
