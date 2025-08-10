@@ -92,7 +92,7 @@ const LoginPage = () => {
           <a href="#" className="forgot-password">Forgot password?</a>
 
           <p className="signup-prompt">
-            Not a member yet? <a href="/register">Sign up</a>
+            Not a member yet? <a href="/membership">Sign up</a>
           </p>
         </div>
 

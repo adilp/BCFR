@@ -1,15 +1,25 @@
 import { useState } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import './MembershipPage.css'
 import Navigation from './Navigation'
+import { useAuth } from '../contexts/AuthContext'
 
 const MembershipPage = () => {
+  const navigate = useNavigate()
+  const { register } = useAuth()
   const [selectedPlan, setSelectedPlan] = useState<'individual' | 'family' | 'student'>('individual')
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     email: '',
-    phone: ''
+    phone: '',
+    username: '',
+    password: '',
+    confirmPassword: '',
+    dateOfBirth: ''
   })
+  const [error, setError] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -17,17 +27,43 @@ const MembershipPage = () => {
       ...prev,
       [name]: value
     }))
+    setError('')
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Handle form submission here
-    const submissionData = {
-      ...formData,
-      membershipPlan: selectedPlan
+    setError('')
+
+    // Validate passwords match
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match')
+      return
     }
-    console.log('Form submitted:', submissionData)
-    // TODO: Send to API
+
+    setIsLoading(true)
+
+    try {
+      // Register the user
+      await register({
+        username: formData.username,
+        email: formData.email,
+        password: formData.password,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        dateOfBirth: formData.dateOfBirth || undefined
+      })
+      
+      // TODO: After successful registration, save membership plan preference
+      // This could be stored in user profile or sent to a separate API endpoint
+      console.log('Membership plan selected:', selectedPlan)
+      
+      // Navigate to home after successful registration
+      navigate({ to: '/' })
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Registration failed. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -100,13 +136,19 @@ const MembershipPage = () => {
         <section className="application-section">
           <div className="form-container">
             <div className="form-header">
-              <h2>Apply for Membership</h2>
+              <h2>Create Your Account</h2>
               <p className="form-subtitle">
-                Complete the form below and our membership team will review your application
+                Register to become a member of Birmingham Council on Foreign Relations
               </p>
             </div>
 
             <form onSubmit={handleSubmit} className="membership-form">
+              {error && (
+                <div className="error-message" style={{ color: 'red', marginBottom: '1rem' }}>
+                  {error}
+                </div>
+              )}
+
               {/* Selected Plan Display */}
               <div className="selected-plan-display">
                 <label>Selected Membership Plan</label>
@@ -124,61 +166,131 @@ const MembershipPage = () => {
                 </div>
               </div>
 
-              <div className="form-row">
+              {/* Account Information */}
+              <div className="form-section">
+                <h3 style={{ marginBottom: '1rem', fontSize: '1.1rem', color: '#333' }}>Account Information</h3>
+                
                 <div className="form-group">
-                  <label htmlFor="firstName">First name</label>
+                  <label htmlFor="username">Username</label>
                   <input
                     type="text"
-                    id="firstName"
-                    name="firstName"
-                    value={formData.firstName}
+                    id="username"
+                    name="username"
+                    value={formData.username}
                     onChange={handleInputChange}
-                    placeholder="Enter your first name"
+                    placeholder="Choose a username"
                     required
+                    disabled={isLoading}
                   />
                 </div>
+
                 <div className="form-group">
-                  <label htmlFor="lastName">Last name</label>
+                  <label htmlFor="email">Email</label>
                   <input
-                    type="text"
-                    id="lastName"
-                    name="lastName"
-                    value={formData.lastName}
+                    type="email"
+                    id="email"
+                    name="email"
+                    value={formData.email}
                     onChange={handleInputChange}
-                    placeholder="Enter your last name"
+                    placeholder="your.email@example.com"
                     required
+                    disabled={isLoading}
                   />
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="password">Password</label>
+                    <input
+                      type="password"
+                      id="password"
+                      name="password"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      placeholder="••••••••••••"
+                      required
+                      disabled={isLoading}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="confirmPassword">Confirm Password</label>
+                    <input
+                      type="password"
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      value={formData.confirmPassword}
+                      onChange={handleInputChange}
+                      placeholder="••••••••••••"
+                      required
+                      disabled={isLoading}
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="form-group">
-                <label htmlFor="email">E-mail</label>
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  placeholder="your.email@example.com"
-                  required
-                />
+              {/* Personal Information */}
+              <div className="form-section">
+                <h3 style={{ marginBottom: '1rem', fontSize: '1.1rem', color: '#333' }}>Personal Information</h3>
+                
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="firstName">First Name</label>
+                    <input
+                      type="text"
+                      id="firstName"
+                      name="firstName"
+                      value={formData.firstName}
+                      onChange={handleInputChange}
+                      placeholder="Your first name"
+                      required
+                      disabled={isLoading}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="lastName">Last Name</label>
+                    <input
+                      type="text"
+                      id="lastName"
+                      name="lastName"
+                      value={formData.lastName}
+                      onChange={handleInputChange}
+                      placeholder="Your last name"
+                      required
+                      disabled={isLoading}
+                    />
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="dateOfBirth">Date of Birth</label>
+                    <input
+                      type="date"
+                      id="dateOfBirth"
+                      name="dateOfBirth"
+                      value={formData.dateOfBirth}
+                      onChange={handleInputChange}
+                      max={new Date().toISOString().split('T')[0]}
+                      disabled={isLoading}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="phone">Phone Number</label>
+                    <input
+                      type="tel"
+                      id="phone"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      placeholder="(555) 123-4567"
+                      disabled={isLoading}
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div className="form-group">
-                <label htmlFor="phone">Phone number</label>
-                <input
-                  type="tel"
-                  id="phone"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleInputChange}
-                  placeholder="(555) 123-4567"
-                  required
-                />
-              </div>
-
-              <button type="submit" className="submit-btn">
-                Submit Application
+              <button type="submit" className="submit-btn" disabled={isLoading}>
+                {isLoading ? 'Creating Account...' : 'Create Account & Continue'}
               </button>
             </form>
 
