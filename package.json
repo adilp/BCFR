@@ -14,9 +14,5 @@
   },
   "devDependencies": {
     "lerna": "^8.0.0"
-  },
-  "dependencies": {
-    "@stripe/react-stripe-js": "^3.9.0",
-    "@stripe/stripe-js": "^7.8.0"
   }
 }
