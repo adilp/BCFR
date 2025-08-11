@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MemberOrgApi.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250726150039_InitialCreate")]
+    [Migration("20250726191823_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -20,6 +20,7 @@ namespace MemberOrgApi.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
+                .HasDefaultSchema("memberorg")
                 .HasAnnotation("ProductVersion", "9.0.0")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
@@ -62,7 +63,7 @@ namespace MemberOrgApi.Migrations
                     b.HasIndex("Email")
                         .IsUnique();
 
-                    b.ToTable("Users");
+                    b.ToTable("Users", "memberorg");
                 });
 #pragma warning restore 612, 618
         }

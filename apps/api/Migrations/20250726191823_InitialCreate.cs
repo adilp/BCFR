@@ -12,8 +12,12 @@ namespace MemberOrgApi.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.EnsureSchema(
+                name: "memberorg");
+
             migrationBuilder.CreateTable(
                 name: "Users",
+                schema: "memberorg",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "integer", nullable: false)
@@ -32,6 +36,7 @@ namespace MemberOrgApi.Migrations
 
             migrationBuilder.CreateIndex(
                 name: "IX_Users_Email",
+                schema: "memberorg",
                 table: "Users",
                 column: "Email",
                 unique: true);
@@ -41,7 +46,8 @@ namespace MemberOrgApi.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "Users");
+                name: "Users",
+                schema: "memberorg");
         }
     }
 }
