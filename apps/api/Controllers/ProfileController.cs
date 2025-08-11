@@ -35,7 +35,7 @@ public class ProfileController : ControllerBase
             string.Join(", ", User.Claims.Select(c => $"{c.Type}={c.Value}")));
             
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
         {
             _logger.LogWarning("Failed to parse user ID from claim: {Claim}", userIdClaim);
             return Unauthorized();
@@ -74,7 +74,7 @@ public class ProfileController : ControllerBase
     public async Task<IActionResult> UpdateProfile([FromBody] UpdateUserProfileDto updateDto)
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
         {
             return Unauthorized();
         }
@@ -137,7 +137,7 @@ public class ProfileController : ControllerBase
     public async Task<IActionResult> GetSubscription()
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
         {
             return Unauthorized();
         }
