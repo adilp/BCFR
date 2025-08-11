@@ -31,7 +31,7 @@ const ProfilePage = () => {
   const [isEditing, setIsEditing] = useState(false)
   const [activeTab, setActiveTab] = useState<'profile' | 'subscription'>('profile')
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null)
-  const [paymentHistory, setPaymentHistory] = useState<PaymentHistory[]>([])
+  // const [paymentHistory, setPaymentHistory] = useState<PaymentHistory[]>([])
   const [loading, setLoading] = useState(false)
   
   const [profileData, setProfileData] = useState({
@@ -106,41 +106,41 @@ const ProfilePage = () => {
     }
   }
 
-  const fetchPaymentHistory = async () => {
-    try {
-      const response = await apiClient.get('/payments/history')
-      setPaymentHistory(response.data)
-    } catch (error) {
-      console.error('Failed to fetch payment history:', error)
-      // Mock data for now
-      setPaymentHistory([
-        {
-          id: 'pay_1',
-          date: '2024-12-10',
-          amount: 125,
-          description: 'Individual Membership - Monthly',
-          status: 'completed',
-          invoiceUrl: '#'
-        },
-        {
-          id: 'pay_2',
-          date: '2024-11-10',
-          amount: 125,
-          description: 'Individual Membership - Monthly',
-          status: 'completed',
-          invoiceUrl: '#'
-        },
-        {
-          id: 'pay_3',
-          date: '2024-10-10',
-          amount: 125,
-          description: 'Individual Membership - Monthly',
-          status: 'completed',
-          invoiceUrl: '#'
-        }
-      ])
-    }
-  }
+  // const fetchPaymentHistory = async () => {
+  //   try {
+  //     const response = await apiClient.get('/payments/history')
+  //     setPaymentHistory(response.data)
+  //   } catch (error) {
+  //     console.error('Failed to fetch payment history:', error)
+  //     // Mock data for now
+  //     setPaymentHistory([
+  //       {
+  //         id: 'pay_1',
+  //         date: '2024-12-10',
+  //         amount: 125,
+  //         description: 'Individual Membership - Monthly',
+  //         status: 'completed',
+  //         invoiceUrl: '#'
+  //       },
+  //       {
+  //         id: 'pay_2',
+  //         date: '2024-11-10',
+  //         amount: 125,
+  //         description: 'Individual Membership - Monthly',
+  //         status: 'completed',
+  //         invoiceUrl: '#'
+  //       },
+  //       {
+  //         id: 'pay_3',
+  //         date: '2024-10-10',
+  //         amount: 125,
+  //         description: 'Individual Membership - Monthly',
+  //         status: 'completed',
+  //         invoiceUrl: '#'
+  //       }
+  //     ])
+  //   }
+  // }
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault()

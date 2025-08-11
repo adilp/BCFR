@@ -1,6 +1,5 @@
 import './EventsPage.css'
 import { useState, useEffect } from 'react'
-import { useNavigate } from '@tanstack/react-router'
 import Navigation from './Navigation'
 import EventsList from './EventsList'
 import { CalendarIcon, ClockIcon, MapPinIcon, LockClosedIcon } from '@heroicons/react/24/outline'
@@ -9,7 +8,6 @@ import { apiClient } from '../services/api'
 
 const EventsPage = () => {
   const { isAuthenticated, user } = useAuth()
-  const navigate = useNavigate()
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false)
   const [loading, setLoading] = useState(true)
   const pastEvents = [

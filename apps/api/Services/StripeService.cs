@@ -157,7 +157,7 @@ namespace MemberOrgApi.Services
             _logger.LogInformation($"Payment successful for session {session.Id}");
             
             if (!session.Metadata.TryGetValue("userId", out var userIdStr) || 
-                !int.TryParse(userIdStr, out var userId))
+                !Guid.TryParse(userIdStr, out var userId))
             {
                 _logger.LogError($"Invalid or missing userId in session metadata");
                 return;
