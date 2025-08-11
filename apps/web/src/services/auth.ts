@@ -11,6 +11,7 @@ export interface RegisterRequest {
   password: string;
   firstName: string;
   lastName: string;
+  dateOfBirth?: string;
 }
 
 export interface AuthResponse {
@@ -28,6 +29,7 @@ export interface User {
   email: string;
   firstName: string;
   lastName: string;
+  dateOfBirth?: string;
 }
 
 class AuthService {
