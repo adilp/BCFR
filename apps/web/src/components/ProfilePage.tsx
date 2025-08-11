@@ -16,14 +16,6 @@ interface SubscriptionData {
   createdAt: string
 }
 
-interface PaymentHistory {
-  id: string
-  date: string
-  amount: number
-  description: string
-  status: string
-  invoiceUrl?: string
-}
 
 const ProfilePage = () => {
   const { user, isAuthenticated } = useAuth()
