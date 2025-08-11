@@ -7,6 +7,7 @@ using System.Text;
 using MemberOrgApi.Data;
 using MemberOrgApi.DTOs;
 using MemberOrgApi.Models;
+using MemberOrgApi.Services;
 using Microsoft.AspNetCore.Authorization;
 
 namespace MemberOrgApi.Controllers;
@@ -18,12 +19,14 @@ public class AuthController : ControllerBase
     private readonly AppDbContext _context;
     private readonly IConfiguration _configuration;
     private readonly ILogger<AuthController> _logger;
+    private readonly IEmailService _emailService;
 
-    public AuthController(AppDbContext context, IConfiguration configuration, ILogger<AuthController> logger)
+    public AuthController(AppDbContext context, IConfiguration configuration, ILogger<AuthController> logger, IEmailService emailService)
     {
         _context = context;
         _configuration = configuration;
         _logger = logger;
+        _emailService = emailService;
     }
 
     [HttpPost("register")]
@@ -78,6 +81,20 @@ public class AuthController : ControllerBase
 
             _context.Sessions.Add(session);
             await _context.SaveChangesAsync();
+
+            // Send welcome email asynchronously
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _emailService.SendWelcomeEmailAsync(user.Email, user.FirstName, user.LastName);
+                    _logger.LogInformation($"Welcome email sent to {user.Email}");
+                }
+                catch (Exception emailEx)
+                {
+                    _logger.LogError(emailEx, $"Failed to send welcome email to {user.Email}");
+                }
+            });
 
             return Ok(new LoginResponse
             {

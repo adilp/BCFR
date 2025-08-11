@@ -12,6 +12,9 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// Add HttpClient factory for email service
+builder.Services.AddHttpClient();
+
 // Configure Database
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
@@ -100,6 +103,9 @@ builder.Services.AddAuthorization(options =>
 // Configure Stripe
 builder.Services.Configure<StripeSettings>(builder.Configuration.GetSection("Stripe"));
 builder.Services.AddScoped<IStripeService, StripeService>();
+
+// Configure Email Service
+builder.Services.AddScoped<IEmailService, EmailService>();
 
 var app = builder.Build();
 
