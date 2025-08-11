@@ -36,7 +36,9 @@ const ProfilePage = () => {
     firstName: user?.firstName || '',
     lastName: user?.lastName || '',
     email: user?.email || '',
-    phoneNumber: '',
+    username: user?.username || '',
+    dateOfBirth: '',
+    phone: '',
     address: '',
     city: '',
     state: '',
@@ -52,16 +54,43 @@ const ProfilePage = () => {
 
   useEffect(() => {
     if (user) {
-      setProfileData(prev => ({
-        ...prev,
-        firstName: user.firstName || '',
-        lastName: user.lastName || '',
-        email: user.email || ''
-      }))
+      fetchProfileData()
       fetchSubscriptionData()
       fetchPaymentHistory()
     }
   }, [user])
+
+  const fetchProfileData = async () => {
+    try {
+      const response = await apiClient.get('/profile')
+      const data = response.data
+      setProfileData({
+        firstName: data.firstName || '',
+        lastName: data.lastName || '',
+        email: data.email || '',
+        username: data.username || '',
+        dateOfBirth: data.dateOfBirth || '',
+        phone: data.phone || '',
+        address: data.address || '',
+        city: data.city || '',
+        state: data.state || '',
+        zipCode: data.zipCode || '',
+        country: data.country || 'United States'
+      })
+    } catch (error) {
+      console.error('Failed to fetch profile:', error)
+      // If profile endpoint fails, try to load basic data from auth context
+      if (user) {
+        setProfileData(prev => ({
+          ...prev,
+          firstName: user.firstName || '',
+          lastName: user.lastName || '',
+          email: user.email || '',
+          username: user.username || ''
+        }))
+      }
+    }
+  }
 
   const fetchSubscriptionData = async () => {
     setLoading(true)
@@ -125,8 +154,14 @@ const ProfilePage = () => {
     try {
       await apiClient.put('/profile', profileData)
       setIsEditing(false)
-    } catch (error) {
+      alert('Profile updated successfully!')
+    } catch (error: any) {
       console.error('Failed to update profile:', error)
+      if (error.response?.data?.message) {
+        alert(error.response.data.message)
+      } else {
+        alert('Failed to update profile. Please try again.')
+      }
     }
   }
 
@@ -225,6 +260,18 @@ const ProfilePage = () => {
                   </div>
 
                   <div className="form-group">
+                    <label className="form-label">Username</label>
+                    <input
+                      type="text"
+                      name="username"
+                      className="form-input"
+                      value={profileData.username}
+                      onChange={handleInputChange}
+                      disabled={!isEditing}
+                    />
+                  </div>
+
+                  <div className="form-group">
                     <label className="form-label">Email</label>
                     <input
                       type="email"
@@ -237,12 +284,24 @@ const ProfilePage = () => {
                   </div>
 
                   <div className="form-group">
+                    <label className="form-label">Date of Birth</label>
+                    <input
+                      type="date"
+                      name="dateOfBirth"
+                      className="form-input"
+                      value={profileData.dateOfBirth}
+                      onChange={handleInputChange}
+                      disabled={!isEditing}
+                    />
+                  </div>
+
+                  <div className="form-group">
                     <label className="form-label">Phone Number</label>
                     <input
                       type="tel"
-                      name="phoneNumber"
+                      name="phone"
                       className="form-input"
-                      value={profileData.phoneNumber}
+                      value={profileData.phone}
                       onChange={handleInputChange}
                       disabled={!isEditing}
                       placeholder="(555) 123-4567"
@@ -322,7 +381,10 @@ const ProfilePage = () => {
                     <button 
                       type="button" 
                       className="btn btn-ghost"
-                      onClick={() => setIsEditing(false)}
+                      onClick={() => {
+                        setIsEditing(false)
+                        fetchProfileData() // Reset form to original data
+                      }}
                     >
                       Cancel
                     </button>
