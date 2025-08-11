@@ -8,6 +8,12 @@ using MemberOrgApi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configure application to use environment variables with proper prefix in production
+if (builder.Environment.IsProduction())
+{
+    builder.Configuration.AddEnvironmentVariables();
+}
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
