@@ -292,6 +292,26 @@
   box-shadow: 0 0 0 3px rgba(66, 99, 235, 0.1);
 }
 
+.email-textarea-recipients {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border-medium);
+  border-radius: 6px;
+  background: var(--bg-white);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-primary);
+  font-family: var(--font-primary);
+  transition: all 0.2s;
+  resize: vertical;
+}
+
+.email-textarea-recipients:focus {
+  outline: none;
+  border-color: var(--primary-blue);
+  box-shadow: 0 0 0 3px rgba(66, 99, 235, 0.1);
+}
+
 .email-composer-footer {
   display: flex;
   justify-content: space-between;

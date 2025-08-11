@@ -146,13 +146,14 @@ const EmailComposer: React.FC<EmailComposerProps> = ({ className = '' }) => {
         <div className="email-composer-body">
           <div className="email-field-group">
             <label htmlFor="to-emails" className="email-label">Recipients:</label>
-            <input
-              type="text"
+            <textarea
               id="to-emails"
               value={toEmails}
               onChange={(e) => setToEmails(e.target.value)}
               placeholder="Enter email addresses separated by commas (e.g., user1@example.com, user2@example.com)"
-              className="email-input"
+              className="email-input email-textarea-recipients"
+              rows={3}
+              style={{ resize: 'vertical', minHeight: '80px', maxHeight: '300px' }}
             />
             <small className="email-help-text">Each recipient will receive an individual email (privacy protected)</small>
           </div>
