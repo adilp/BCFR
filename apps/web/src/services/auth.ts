@@ -12,6 +12,12 @@ export interface RegisterRequest {
   firstName: string;
   lastName: string;
   dateOfBirth?: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  country?: string;
 }
 
 export interface AuthResponse {
@@ -34,7 +40,9 @@ export interface User {
 
 class AuthService {
   async login(credentials: LoginRequest): Promise<AuthResponse> {
+    console.log('AuthService.login called with:', credentials);
     const response = await api.post<AuthResponse>('/auth/login', credentials);
+    console.log('Login response:', response.data);
     this.setAuthData(response.data);
     return response.data;
   }

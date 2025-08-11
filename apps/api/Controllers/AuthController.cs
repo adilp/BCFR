@@ -51,7 +51,13 @@ public class AuthController : ControllerBase
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
                 FirstName = request.FirstName,
                 LastName = request.LastName,
-                DateOfBirth = request.DateOfBirth
+                DateOfBirth = request.DateOfBirth,
+                Phone = request.Phone,
+                Address = request.Address,
+                City = request.City,
+                State = request.State,
+                ZipCode = request.ZipCode,
+                Country = request.Country ?? "United States"
             };
 
             _context.Users.Add(user);
