@@ -14,6 +14,10 @@ services:
   - name: api
     dockerfile_path: apps/api/Dockerfile
     source_dir: apps/api
+    github:
+      repo: adilp/BCFR
+      branch: main
+      deploy_on_push: true
     http_port: 8080
     instance_count: 1
     instance_size_slug: basic-xxs
@@ -34,6 +38,10 @@ services:
 static_sites:
   - name: web
     source_dir: apps/web
+    github:
+      repo: adilp/BCFR
+      branch: main
+      deploy_on_push: true
     build_command: npm install && npm run build
     output_dir: dist
     routes:
