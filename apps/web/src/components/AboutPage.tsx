@@ -1,21 +1,11 @@
 import './AboutPage.css'
 import { GlobeAltIcon, UserGroupIcon, ChatBubbleLeftRightIcon } from '@heroicons/react/24/solid'
+import Navigation from './Navigation'
 
 const AboutPage = () => {
   return (
     <div className="about-page">
-      {/* Navigation */}
-      <nav className="navbar">
-        <div className="nav-container">
-          <a href="/" className="logo" style={{ textDecoration: 'none' }}>BCFR</a>
-          <div className="nav-menu">
-            <a href="/about" className="nav-link">About</a>
-            <a href="/#events" className="nav-link">Events</a>
-            <a href="/membership" className="nav-link">Membership</a>
-            <a href="/login" className="login-btn">Member Login</a>
-          </div>
-        </div>
-      </nav>
+      <Navigation />
 
       {/* Mission Section */}
       <section className="mission-section">

@@ -1,22 +1,12 @@
 import './LandingPage.css'
 import { GlobeAltIcon, UserGroupIcon, AcademicCapIcon } from '@heroicons/react/24/solid'
+import Navigation from './Navigation'
 
 const LandingPage = () => {
 
   return (
     <>
-      {/* Navigation */}
-      <nav className="navbar">
-        <div className="nav-container">
-          <a href="/" className="logo" style={{ textDecoration: 'none' }}>BCFR</a>
-          <div className="nav-menu">
-            <a href="/about" className="nav-link">About</a>
-            <a href="#events" className="nav-link">Events</a>
-            <a href="/membership" className="nav-link">Membership</a>
-            <a href="/login" className="login-btn">Member Login</a>
-          </div>
-        </div>
-      </nav>
+      <Navigation />
 
       {/* Hero Section */}
       <section className="hero">
