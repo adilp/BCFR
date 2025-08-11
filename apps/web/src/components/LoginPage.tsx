@@ -25,16 +25,28 @@ const LoginPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    console.log('Form submitted with:', formData) // Debug log
+    
+    // Debug: Check if form data is empty
+    if (!formData.username || !formData.password) {
+      console.error('Form data is empty!', formData)
+      setError('Please enter username and password')
+      return
+    }
+    
     setError('')
     setIsLoading(true)
 
     try {
+      console.log('Calling login with:', formData.username, formData.password)
       await login({
         username: formData.username,
         password: formData.password
       })
+      console.log('Login successful, navigating to home')
       navigate({ to: '/' })
     } catch (err: any) {
+      console.error('Login error:', err) // Debug log
       setError(err.response?.data?.message || 'Login failed. Please try again.')
     } finally {
       setIsLoading(false)

@@ -15,7 +15,12 @@ const MembershipPage = () => {
     username: '',
     password: '',
     confirmPassword: '',
-    dateOfBirth: ''
+    dateOfBirth: '',
+    address: '',
+    city: '',
+    state: '',
+    zipCode: '',
+    country: 'United States'
   })
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -90,7 +95,13 @@ const MembershipPage = () => {
         password: formData.password,
         firstName: formData.firstName,
         lastName: formData.lastName,
-        dateOfBirth: formData.dateOfBirth || undefined
+        dateOfBirth: formData.dateOfBirth || undefined,
+        phone: formData.phone || undefined,
+        address: formData.address || undefined,
+        city: formData.city || undefined,
+        state: formData.state || undefined,
+        zipCode: formData.zipCode || undefined,
+        country: formData.country || undefined
       })
       
       // After successful registration, show the checkout form
@@ -342,6 +353,78 @@ const MembershipPage = () => {
                       placeholder="(555) 123-4567"
                       disabled={isLoading}
                     />
+                  </div>
+                </div>
+
+                {/* Mailing Address */}
+                <div className="form-group">
+                  <label htmlFor="address">Street Address</label>
+                  <input
+                    type="text"
+                    id="address"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleInputChange}
+                    placeholder="123 Main Street"
+                    disabled={isLoading}
+                  />
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="city">City</label>
+                    <input
+                      type="text"
+                      id="city"
+                      name="city"
+                      value={formData.city}
+                      onChange={handleInputChange}
+                      placeholder="Birmingham"
+                      disabled={isLoading}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="state">State</label>
+                    <input
+                      type="text"
+                      id="state"
+                      name="state"
+                      value={formData.state}
+                      onChange={handleInputChange}
+                      placeholder="AL"
+                      disabled={isLoading}
+                    />
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="zipCode">ZIP Code</label>
+                    <input
+                      type="text"
+                      id="zipCode"
+                      name="zipCode"
+                      value={formData.zipCode}
+                      onChange={handleInputChange}
+                      placeholder="35203"
+                      disabled={isLoading}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="country">Country</label>
+                    <select
+                      id="country"
+                      name="country"
+                      value={formData.country}
+                      onChange={(e) => setFormData(prev => ({ ...prev, country: e.target.value }))}
+                      disabled={isLoading}
+                    >
+                      <option value="United States">United States</option>
+                      <option value="Canada">Canada</option>
+                      <option value="Mexico">Mexico</option>
+                      <option value="United Kingdom">United Kingdom</option>
+                      <option value="Other">Other</option>
+                    </select>
                   </div>
                 </div>
               </div>
