@@ -1,17 +1,16 @@
-spec:
-  name: memberorg-app
-  region: sfo
-  
-  # Dev Database (Free tier)
-  databases:
+name: memberorg-app
+region: sfo
+
+# Dev Database (Free tier)
+databases:
   - name: memberorg-db
     engine: PG
     version: "15"
     production: false
     size: db-s-dev-database
   
-  # C# API Service
-  services:
+# C# API Service
+services:
   - name: api
     dockerfile_path: apps/api/Dockerfile
     source_dir: apps/api
@@ -31,8 +30,8 @@ spec:
       scope: RUN_TIME
       value: ${APP_URL}
   
-  # React Web App
-  static_sites:
+# React Web App
+static_sites:
   - name: web
     source_dir: apps/web
     build_command: npm install && npm run build
@@ -43,9 +42,8 @@ spec:
     - key: VITE_API_URL
       scope: BUILD_TIME
       value: ${APP_URL}/api
-    
-  # Environment variables
-  envs:
+# Environment variables
+envs:
   - key: APP_URL
     scope: RUN_AND_BUILD_TIME
     value: ${APP_URL}
