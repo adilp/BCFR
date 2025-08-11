@@ -12,6 +12,7 @@ public class AppDbContext : DbContext
 
     public DbSet<User> Users { get; set; }
     public DbSet<Session> Sessions { get; set; }
+    public DbSet<MembershipSubscription> MembershipSubscriptions { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -43,6 +44,24 @@ public class AppDbContext : DbContext
             entity.HasIndex(e => e.Token).IsUnique();
             entity.Property(e => e.UserAgent).HasMaxLength(500);
             entity.Property(e => e.IpAddress).HasMaxLength(45);
+            
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Configure MembershipSubscription entity
+        modelBuilder.Entity<MembershipSubscription>(entity =>
+        {
+            entity.ToTable("Subscriptions");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.MembershipTier).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.StripeCustomerId).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.StripeSubscriptionId).IsRequired().HasMaxLength(100);
+            entity.HasIndex(e => e.StripeSubscriptionId).IsUnique();
+            entity.Property(e => e.Status).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.Amount).HasPrecision(10, 2);
             
             entity.HasOne(e => e.User)
                 .WithMany()
