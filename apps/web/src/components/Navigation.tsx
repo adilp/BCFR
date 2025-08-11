@@ -39,6 +39,7 @@ const Navigation = () => {
             {isAuthenticated ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                 <span style={{ color: '#333' }}>Hi, {user?.firstName}!</span>
+                <a href="/profile" className="nav-link">My Profile</a>
                 <button onClick={handleLogout} className="login-btn">Logout</button>
               </div>
             ) : (
@@ -68,6 +69,7 @@ const Navigation = () => {
           {isAuthenticated ? (
             <>
               <div style={{ padding: '0.5rem 1rem', color: '#666' }}>Hi, {user?.firstName}!</div>
+              <a href="/profile" className="mobile-nav-link" onClick={closeMobileMenu}>My Profile</a>
               <button onClick={() => { handleLogout(); closeMobileMenu(); }} className="mobile-login-btn">Logout</button>
             </>
           ) : (
