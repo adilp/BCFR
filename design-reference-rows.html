@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Design Reference - Rows-Inspired Style Guide</title>
+    <style>
+        /* CSS Variables for Design System */
+        :root {
+            /* Primary Colors - Based on Rows */
+            --primary-yellow: #FFC833;
+            --primary-purple: #6B3AA0;
+            --primary-purple-dark: #1E0E31;
+            --primary-blue: #4263EB;
+            --primary-blue-light: #5C7CFA;
+            
+            /* Background Colors */
+            --bg-white: #FFFFFF;
+            --bg-light-gray: #fdf8f1;
+            --bg-gray: #F5F2ED;
+            --bg-dark-section: #1E0E31;
+            --bg-purple-section: #6B3AA0;
+            
+            /* Text Colors */
+            --text-primary: #212529;
+            --text-secondary: #495057;
+            --text-muted: #6C757D;
+            --text-light: #868E96;
+            --text-white: #FFFFFF;
+            
+            /* Border & Divider Colors */
+            --border-light: #F0EBE5;
+            --border-medium: #E8E0D6;
+            --border-dark: #DDD4C7;
+            
+            /* Data Visualization Colors */
+            --chart-blue: #4263EB;
+            --chart-purple: #7950F2;
+            --chart-green: #40C057;
+            --chart-yellow: #FAB005;
+            --chart-red: #FA5252;
+            --chart-teal: #15AABF;
+            
+            /* Shadows */
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+            --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+            --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.1);
+            
+            /* Typography */
+            --font-primary: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', 'Roboto', sans-serif;
+            --font-mono: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+            
+            /* Font Weights */
+            --font-light: 300;
+            --font-regular: 400;
+            --font-medium: 500;
+            --font-semibold: 600;
+            --font-bold: 700;
+            
+            /* Spacing */
+            --space-xs: 0.25rem;
+            --space-sm: 0.5rem;
+            --space-md: 1rem;
+            --space-lg: 1.5rem;
+            --space-xl: 2rem;
+            --space-xxl: 3rem;
+            --space-xxxl: 4rem;
+            
+            /* Border Radius */
+            --radius-sm: 4px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+            --radius-xl: 16px;
+            --radius-round: 50%;
+            --radius-pill: 9999px;
+            
+            /* Transitions */
+            --transition-fast: 150ms ease;
+            --transition-base: 200ms ease;
+            --transition-slow: 300ms ease;
+            
+            /* Grid Gaps */
+            --grid-gap-sm: 12px;
+            --grid-gap-md: 16px;
+            --grid-gap-lg: 24px;
+        }
+        
+        /* Base Styles */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: var(--font-primary);
+            font-weight: var(--font-regular);
+            font-size: 14px;
+            line-height: 1.5;
+            color: var(--text-primary);
+            background-color: var(--bg-light-gray);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        /* Typography */
+        h1 {
+            font-size: 2.5rem;
+            font-weight: var(--font-bold);
+            line-height: 1.2;
+            letter-spacing: -0.02em;
+            margin-bottom: var(--space-lg);
+        }
+        
+        h2 {
+            font-size: 2rem;
+            font-weight: var(--font-semibold);
+            line-height: 1.3;
+            letter-spacing: -0.01em;
+            margin-bottom: var(--space-md);
+        }
+        
+        h3 {
+            font-size: 1.5rem;
+            font-weight: var(--font-semibold);
+            line-height: 1.4;
+            margin-bottom: var(--space-md);
+        }
+        
+        h4 {
+            font-size: 1.25rem;
+            font-weight: var(--font-medium);
+            line-height: 1.4;
+            margin-bottom: var(--space-sm);
+        }
+        
+        h5 {
+            font-size: 1rem;
+            font-weight: var(--font-medium);
+            line-height: 1.5;
+            margin-bottom: var(--space-sm);
+        }
+        
+        p {
+            font-size: 1rem;
+            line-height: 1.6;
+            margin-bottom: var(--space-md);
+            color: var(--text-secondary);
+        }
+        
+        /* Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: var(--space-xl);
+        }
+        
+        /* Sections */
+        .section {
+            margin-bottom: var(--space-xxxl);
+        }
+        
+        .section-header {
+            text-align: center;
+            margin-bottom: var(--space-xxl);
+        }
+        
+        .section-title {
+            font-size: 2.5rem;
+            font-weight: var(--font-bold);
+            margin-bottom: var(--space-md);
+        }
+        
+        .section-subtitle {
+            font-size: 1.125rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        /* Color Sections */
+        .color-section-yellow {
+            background-color: var(--primary-yellow);
+            padding: var(--space-xxxl) 0;
+        }
+        
+        .color-section-purple {
+            background-color: var(--primary-purple);
+            color: var(--text-white);
+            padding: var(--space-xxxl) 0;
+        }
+        
+        .color-section-dark {
+            background-color: var(--bg-dark-section);
+            color: var(--text-white);
+            padding: var(--space-xxxl) 0;
+        }
+        
+        /* Cards & Panels */
+        .card {
+            background-color: var(--bg-white);
+            border-radius: var(--radius-lg);
+            padding: var(--space-xl);
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border-light);
+            transition: all var(--transition-base);
+        }
+        
+        .card:hover {
+            box-shadow: var(--shadow-lg);
+            transform: translateY(-2px);
+        }
+        
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: var(--space-lg);
+            padding-bottom: var(--space-md);
+            border-bottom: 1px solid var(--border-light);
+        }
+        
+        .card-title {
+            font-size: 1.125rem;
+            font-weight: var(--font-semibold);
+            margin: 0;
+        }
+        
+        /* Spreadsheet Table */
+        .spreadsheet-container {
+            background-color: var(--bg-white);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow-md);
+            margin-bottom: var(--space-xl);
+        }
+        
+        .spreadsheet-header {
+            background-color: var(--bg-gray);
+            padding: var(--space-md) var(--space-lg);
+            border-bottom: 2px solid var(--border-medium);
+            display: flex;
+            align-items: center;
+            gap: var(--space-md);
+        }
+        
+        .spreadsheet-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+        }
+        
+        .spreadsheet-table th {
+            background-color: var(--bg-gray);
+            padding: var(--space-sm) var(--space-md);
+            text-align: left;
+            font-weight: var(--font-medium);
+            color: var(--text-secondary);
+            border-right: 1px solid var(--border-light);
+            border-bottom: 2px solid var(--border-medium);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .spreadsheet-table td {
+            padding: var(--space-sm) var(--space-md);
+            border-right: 1px solid var(--border-light);
+            border-bottom: 1px solid var(--border-light);
+            background-color: var(--bg-white);
+        }
+        
+        .spreadsheet-table td:first-child,
+        .spreadsheet-table th:first-child {
+            background-color: var(--bg-gray);
+            font-weight: var(--font-medium);
+            color: var(--text-secondary);
+            text-align: center;
+            width: 50px;
+        }
+        
+        .spreadsheet-table tr:hover td {
+            background-color: var(--bg-light-gray);
+        }
+        
+        .cell-editable {
+            cursor: text;
+            transition: all var(--transition-fast);
+        }
+        
+        .cell-editable:hover {
+            background-color: #E8F4FD;
+            outline: 2px solid var(--primary-blue);
+            outline-offset: -2px;
+        }
+        
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space-sm);
+            padding: var(--space-sm) var(--space-lg);
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: 0.875rem;
+            font-weight: var(--font-medium);
+            cursor: pointer;
+            transition: all var(--transition-base);
+            text-decoration: none;
+            white-space: nowrap;
+        }
+        
+        .btn:focus {
+            outline: 2px solid var(--primary-blue);
+            outline-offset: 2px;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-blue);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--primary-blue-light);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .btn-yellow {
+            background-color: var(--primary-yellow);
+            color: var(--text-primary);
+        }
+        
+        .btn-yellow:hover {
+            background-color: #FFD45C;
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .btn-secondary {
+            background-color: var(--bg-gray);
+            color: var(--text-primary);
+            border: 1px solid var(--border-medium);
+        }
+        
+        .btn-secondary:hover {
+            background-color: var(--bg-light-gray);
+            border-color: var(--border-dark);
+        }
+        
+        .btn-ghost {
+            background-color: transparent;
+            color: var(--text-secondary);
+            padding: var(--space-sm);
+        }
+        
+        .btn-ghost:hover {
+            background-color: var(--bg-gray);
+            color: var(--text-primary);
+        }
+        
+        .btn-icon {
+            padding: var(--space-sm);
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* Form Elements */
+        .form-group {
+            margin-bottom: var(--space-lg);
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: var(--space-xs);
+            font-size: 0.875rem;
+            font-weight: var(--font-medium);
+            color: var(--text-secondary);
+        }
+        
+        .form-input,
+        .form-select,
+        .form-textarea {
+            width: 100%;
+            padding: var(--space-sm) var(--space-md);
+            font-size: 0.875rem;
+            background-color: var(--bg-white);
+            border: 1px solid var(--border-medium);
+            border-radius: var(--radius-md);
+            transition: all var(--transition-base);
+        }
+        
+        .form-input:focus,
+        .form-select:focus,
+        .form-textarea:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 3px rgba(66, 99, 235, 0.1);
+        }
+        
+        .form-input::placeholder {
+            color: var(--text-light);
+        }
+        
+        /* Search Box */
+        .search-box {
+            position: relative;
+            max-width: 400px;
+        }
+        
+        .search-box input {
+            padding-left: var(--space-xxl);
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: var(--space-md);
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-light);
+        }
+        
+        /* Tags & Badges */
+        .tag {
+            display: inline-flex;
+            align-items: center;
+            padding: var(--space-xs) var(--space-md);
+            font-size: 0.75rem;
+            font-weight: var(--font-medium);
+            border-radius: var(--radius-pill);
+            background-color: var(--bg-gray);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-light);
+        }
+        
+        .tag-blue {
+            background-color: #E8F4FD;
+            color: var(--primary-blue);
+            border-color: var(--primary-blue);
+        }
+        
+        .tag-purple {
+            background-color: #F3ECFE;
+            color: var(--primary-purple);
+            border-color: var(--primary-purple);
+        }
+        
+        .tag-green {
+            background-color: #E6FCF5;
+            color: var(--chart-green);
+            border-color: var(--chart-green);
+        }
+        
+        /* Data Visualization Components */
+        .chart-container {
+            background-color: var(--bg-white);
+            border-radius: var(--radius-lg);
+            padding: var(--space-xl);
+            box-shadow: var(--shadow-sm);
+            margin-bottom: var(--space-lg);
+        }
+        
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--space-lg);
+        }
+        
+        .chart-title {
+            font-size: 1rem;
+            font-weight: var(--font-semibold);
+            color: var(--text-primary);
+        }
+        
+        .chart-legend {
+            display: flex;
+            gap: var(--space-lg);
+            font-size: 0.875rem;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-xs);
+        }
+        
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: var(--radius-sm);
+        }
+        
+        /* Mock Chart Bars */
+        .bar-chart {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            height: 200px;
+            gap: var(--space-md);
+            padding: var(--space-md) 0;
+        }
+        
+        .bar {
+            flex: 1;
+            background-color: var(--chart-blue);
+            border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+            transition: all var(--transition-base);
+            position: relative;
+        }
+        
+        .bar:hover {
+            opacity: 0.8;
+            transform: translateY(-2px);
+        }
+        
+        .bar:nth-child(2) { background-color: var(--chart-purple); height: 75%; }
+        .bar:nth-child(3) { background-color: var(--chart-green); height: 60%; }
+        .bar:nth-child(4) { background-color: var(--chart-yellow); height: 85%; }
+        .bar:nth-child(5) { background-color: var(--chart-teal); height: 45%; }
+        
+        /* Navigation Tabs */
+        .tabs {
+            display: flex;
+            gap: var(--space-sm);
+            border-bottom: 1px solid var(--border-light);
+            margin-bottom: var(--space-xl);
+        }
+        
+        .tab {
+            padding: var(--space-sm) var(--space-lg);
+            font-size: 0.875rem;
+            font-weight: var(--font-medium);
+            color: var(--text-secondary);
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            transition: all var(--transition-base);
+        }
+        
+        .tab:hover {
+            color: var(--text-primary);
+            background-color: var(--bg-light-gray);
+        }
+        
+        .tab.active {
+            color: var(--primary-blue);
+            border-bottom-color: var(--primary-blue);
+        }
+        
+        /* Toolbar */
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            padding: var(--space-sm);
+            background-color: var(--bg-gray);
+            border-radius: var(--radius-md);
+            margin-bottom: var(--space-lg);
+        }
+        
+        .toolbar-separator {
+            width: 1px;
+            height: 24px;
+            background-color: var(--border-medium);
+            margin: 0 var(--space-sm);
+        }
+        
+        /* Grid Layouts */
+        .grid {
+            display: grid;
+            gap: var(--grid-gap-lg);
+        }
+        
+        .grid-2 {
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        }
+        
+        .grid-3 {
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        }
+        
+        .grid-4 {
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        }
+        
+        /* Feature Cards */
+        .feature-card {
+            text-align: center;
+            padding: var(--space-xxl);
+        }
+        
+        .feature-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto var(--space-lg);
+            background-color: var(--bg-gray);
+            border-radius: var(--radius-xl);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+        }
+        
+        .feature-title {
+            font-size: 1.25rem;
+            font-weight: var(--font-semibold);
+            margin-bottom: var(--space-sm);
+        }
+        
+        .feature-description {
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+        
+        /* Color Palette Display */
+        .color-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: var(--space-md);
+            margin-bottom: var(--space-xl);
+        }
+        
+        .color-swatch {
+            height: 100px;
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: flex-end;
+            padding: var(--space-md);
+            position: relative;
+            cursor: pointer;
+            transition: all var(--transition-base);
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .color-swatch:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .color-info {
+            background: rgba(255, 255, 255, 0.95);
+            padding: var(--space-xs) var(--space-sm);
+            border-radius: var(--radius-sm);
+            width: 100%;
+            font-size: 0.75rem;
+        }
+        
+        .color-name {
+            font-weight: var(--font-semibold);
+            display: block;
+            color: var(--text-primary);
+        }
+        
+        .color-value {
+            font-family: var(--font-mono);
+            font-size: 0.625rem;
+            color: var(--text-secondary);
+        }
+        
+        /* Utility Classes */
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .text-muted { color: var(--text-muted); }
+        .text-small { font-size: 0.875rem; }
+        .text-tiny { font-size: 0.75rem; }
+        
+        .mt-sm { margin-top: var(--space-sm); }
+        .mt-md { margin-top: var(--space-md); }
+        .mt-lg { margin-top: var(--space-lg); }
+        .mb-sm { margin-bottom: var(--space-sm); }
+        .mb-md { margin-bottom: var(--space-md); }
+        .mb-lg { margin-bottom: var(--space-lg); }
+        
+        .flex { display: flex; }
+        .flex-center { display: flex; align-items: center; justify-content: center; }
+        .flex-between { display: flex; justify-content: space-between; align-items: center; }
+        .gap-sm { gap: var(--space-sm); }
+        .gap-md { gap: var(--space-md); }
+        .gap-lg { gap: var(--space-lg); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="section">
+            <h1 class="text-center">Rows-Inspired Design System</h1>
+            <p class="text-center text-muted">A modern spreadsheet interface design language</p>
+        </header>
+        
+        <!-- Color Palette Section -->
+        <section class="section">
+            <div class="section-header">
+                <h2 class="section-title">Color Palette</h2>
+                <p class="section-subtitle">Primary and supporting colors for the design system</p>
+            </div>
+            
+            <div class="color-grid">
+                <div class="color-swatch" style="background-color: var(--primary-yellow);">
+                    <div class="color-info">
+                        <span class="color-name">Primary Yellow</span>
+                        <span class="color-value">#FFD93D</span>
+                    </div>
+                </div>
+                <div class="color-swatch" style="background-color: var(--primary-purple);">
+                    <div class="color-info">
+                        <span class="color-name">Primary Purple</span>
+                        <span class="color-value">#6B3AA0</span>
+                    </div>
+                </div>
+                <div class="color-swatch" style="background-color: var(--primary-blue);">
+                    <div class="color-info">
+                        <span class="color-name">Primary Blue</span>
+                        <span class="color-value">#4263EB</span>
+                    </div>
+                </div>
+                <div class="color-swatch" style="background-color: var(--bg-dark-section);">
+                    <div class="color-info">
+                        <span class="color-name">Dark Background</span>
+                        <span class="color-value">#1E0E31</span>
+                    </div>
+                </div>
+                <div class="color-swatch" style="background-color: var(--chart-green);">
+                    <div class="color-info">
+                        <span class="color-name">Chart Green</span>
+                        <span class="color-value">#40C057</span>
+                    </div>
+                </div>
+                <div class="color-swatch" style="background-color: var(--chart-teal);">
+                    <div class="color-info">
+                        <span class="color-name">Chart Teal</span>
+                        <span class="color-value">#15AABF</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Typography Section -->
+        <section class="section">
+            <div class="section-header">
+                <h2 class="section-title">Typography</h2>
+                <p class="section-subtitle">Clean, modern type scale for data-heavy interfaces</p>
+            </div>
+            
+            <div class="card">
+                <h1>Heading 1 - Bold 2.5rem</h1>
+                <h2>Heading 2 - Semibold 2rem</h2>
+                <h3>Heading 3 - Semibold 1.5rem</h3>
+                <h4>Heading 4 - Medium 1.25rem</h4>
+                <h5>Heading 5 - Medium 1rem</h5>
+                <p>Body text uses a comfortable 14px base size with 1.6 line height for optimal readability in data-dense environments. The Inter font family provides excellent clarity at small sizes.</p>
+                <p class="text-small text-muted">Small text (14px) for secondary information</p>
+                <p class="text-tiny text-muted">Tiny text (12px) for labels and metadata</p>
+            </div>
+        </section>
+        
+        <!-- Buttons Section -->
+        <section class="section">
+            <div class="section-header">
+                <h2 class="section-title">Buttons & Actions</h2>
+                <p class="section-subtitle">Interactive elements for spreadsheet interfaces</p>
+            </div>
+            
+            <div class="card">
+                <h3>Primary Actions</h3>
+                <div class="flex gap-md mb-lg">
+                    <button class="btn btn-primary">Get Started</button>
+                    <button class="btn btn-yellow">Upgrade Plan</button>
+                    <button class="btn btn-secondary">Learn More</button>
+                    <button class="btn btn-ghost">Cancel</button>
+                </div>
+                
+                <h3>Button Sizes</h3>
+                <div class="flex gap-md mb-lg">
+                    <button class="btn btn-primary" style="padding: var(--space-xs) var(--space-md); font-size: 0.75rem;">Small</button>
+                    <button class="btn btn-primary">Default</button>
+                    <button class="btn btn-primary" style="padding: var(--space-md) var(--space-xl); font-size: 1rem;">Large</button>
+                </div>
+                
+                <h3>Icon Buttons</h3>
+                <div class="flex gap-sm">
+                    <button class="btn btn-ghost btn-icon">📊</button>
+                    <button class="btn btn-ghost btn-icon">➕</button>
+                    <button class="btn btn-ghost btn-icon">🔍</button>
+                    <button class="btn btn-ghost btn-icon">⚙️</button>
+                    <button class="btn btn-ghost btn-icon">📤</button>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Spreadsheet Interface -->
+        <section class="section">
+            <div class="section-header">
+                <h2 class="section-title">Spreadsheet Components</h2>
+                <p class="section-subtitle">Core interface elements for data manipulation</p>
+            </div>
+            
+            <!-- Toolbar -->
+            <div class="toolbar mb-lg">
+                <button class="btn btn-ghost btn-icon">↩️</button>
+                <button class="btn btn-ghost btn-icon">↪️</button>
+                <div class="toolbar-separator"></div>
+                <button class="btn btn-ghost btn-icon">✂️</button>
+                <button class="btn btn-ghost btn-icon">📋</button>
+                <button class="btn btn-ghost btn-icon">📄</button>
+                <div class="toolbar-separator"></div>
+                <button class="btn btn-ghost">B</button>
+                <button class="btn btn-ghost">I</button>
+                <button class="btn btn-ghost">U</button>
+                <div class="toolbar-separator"></div>
+                <select class="form-select" style="width: auto;">
+                    <option>Arial</option>
+                    <option>Helvetica</option>
+                    <option>Times</option>
+                </select>
+                <select class="form-select" style="width: 80px;">
+                    <option>12</option>
+                    <option>14</option>
+                    <option>16</option>
+                </select>
+            </div>
+            
+            <!-- Spreadsheet Table -->
+            <div class="spreadsheet-container">
+                <div class="spreadsheet-header">
+                    <div class="search-box">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" class="form-input" placeholder="Search in sheet...">
+                    </div>
+                    <div class="flex gap-sm" style="margin-left: auto;">
+                        <button class="btn btn-secondary">Filter</button>
+                        <button class="btn btn-secondary">Sort</button>
+                        <button class="btn btn-primary">+ Add Column</button>
+                    </div>
+                </div>
+                <table class="spreadsheet-table">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>A</th>
+                            <th>B</th>
+                            <th>C</th>
+                            <th>D</th>
+                            <th>E</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td>
+                            <td class="cell-editable">Product Name</td>
+                            <td class="cell-editable">Category</td>
+                            <td class="cell-editable">Price</td>
+                            <td class="cell-editable">Stock</td>
+                            <td class="cell-editable">Status</td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td class="cell-editable">MacBook Pro</td>
+                            <td class="cell-editable">Electronics</td>
+                            <td class="cell-editable">$2,399</td>
+                            <td class="cell-editable">15</td>
+                            <td class="cell-editable"><span class="tag tag-green">In Stock</span></td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td class="cell-editable">Office Chair</td>
+                            <td class="cell-editable">Furniture</td>
+                            <td class="cell-editable">$459</td>
+                            <td class="cell-editable">8</td>
+                            <td class="cell-editable"><span class="tag tag-blue">Low Stock</span></td>
+                        </tr>
+                        <tr>
+                            <td>4</td>
+                            <td class="cell-editable">Desk Lamp</td>
+                            <td class="cell-editable">Accessories</td>
+                            <td class="cell-editable">$89</td>
+                            <td class="cell-editable">0</td>
+                            <td class="cell-editable"><span class="tag">Out of Stock</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        
+        <!-- Data Visualization -->
+        <section class="section">
+            <div class="section-header">
+                <h2 class="section-title">Data Visualization</h2>
+                <p class="section-subtitle">Charts and graphs for data insights</p>
+            </div>
+            
+            <div class="grid grid-2">
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h4 class="chart-title">Monthly Revenue</h4>
+                        <div class="chart-legend">
+                            <div class="legend-item">
+                                <div class="legend-color" style="background-color: var(--chart-blue);"></div>
+                                <span>2024</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background-color: var(--chart-purple);"></div>
+                                <span>2023</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bar-chart">
+                        <div class="bar" style="height: 70%;"></div>
+                        <div class="bar" style="height: 85%;"></div>
+                        <div class="bar" style="height: 60%;"></div>
+                        <div class="bar" style="height: 90%;"></div>
+                        <div class="bar" style="height: 75%;"></div>
+                    </div>
+                </div>
+                
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h4 class="chart-title">User Growth</h4>
+                        <button class="btn btn-ghost">View Details</button>
+                    </div>
+                    <div class="flex-center" style="height: 200px; background: var(--bg-light-gray); border-radius: var(--radius-md);">
+                        <div style="text-align: center;">
+                            <div style="font-size: 3rem; font-weight: var(--font-bold); color: var(--primary-blue);">+42%</div>
+                            <div class="text-muted">vs. last quarter</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Form Elements -->
+        <section class="section">
+            <div class="section-header">
+                <h2 class="section-title">Form Elements</h2>
+                <p class="section-subtitle">Input components for data entry</p>
+            </div>
+            
+            <div class="card">
+                <div class="grid grid-2">
+                    <div>
+                        <div class="form-group">
+                            <label class="form-label">Text Input</label>
+                            <input type="text" class="form-input" placeholder="Enter text...">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Select Dropdown</label>
+                            <select class="form-select">
+                                <option>Choose an option...</option>
+                                <option>Option 1</option>
+                                <option>Option 2</option>
+                                <option>Option 3</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Search with Icon</label>
+                            <div class="search-box">
+                                <span class="search-icon">🔍</span>
+                                <input type="text" class="form-input" placeholder="Search...">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <div class="form-group">
+                            <label class="form-label">Textarea</label>
+                            <textarea class="form-textarea" rows="4" placeholder="Enter long text..."></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Tags</label>
+                            <div class="flex gap-sm flex-wrap">
+                                <span class="tag">Default</span>
+                                <span class="tag tag-blue">Primary</span>
+                                <span class="tag tag-purple">Purple</span>
+                                <span class="tag tag-green">Success</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Navigation Patterns -->
+        <section class="section">
+            <div class="section-header">
+                <h2 class="section-title">Navigation</h2>
+                <p class="section-subtitle">Tab and menu patterns</p>
+            </div>
+            
+            <div class="card">
+                <div class="tabs">
+                    <button class="tab active">Overview</button>
+                    <button class="tab">Data</button>
+                    <button class="tab">Formulas</button>
+                    <button class="tab">Charts</button>
+                    <button class="tab">Settings</button>
+                </div>
+                
+                <div style="padding: var(--space-lg) 0;">
+                    <p>Tab content appears here. The active tab has a blue underline indicator.</p>
+                </div>
+            </div>
+        </section>
+    </div>
+    
+    <!-- Yellow Section -->
+    <div class="color-section-yellow">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Work Smarter, Not Harder</h2>
+                <p class="section-subtitle">Transform your data into actionable insights</p>
+            </div>
+            
+            <div class="grid grid-3">
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3 class="feature-title">Advanced Analytics</h3>
+                    <p class="feature-description">Powerful formulas and functions at your fingertips</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔗</div>
+                    <h3 class="feature-title">Connected Data</h3>
+                    <p class="feature-description">Link sheets and sync with external sources</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🤝</div>
+                    <h3 class="feature-title">Real-time Collaboration</h3>
+                    <p class="feature-description">Work together seamlessly with your team</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Purple Section -->
+    <div class="color-section-purple">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title" style="color: white;">Build Reports Your Team Will Love</h2>
+                <p class="section-subtitle" style="color: rgba(255,255,255,0.8);">Beautiful visualizations that tell your data's story</p>
+            </div>
+            
+            <div class="text-center">
+                <button class="btn btn-yellow" style="font-size: 1rem; padding: var(--space-md) var(--space-xl);">
+                    Start Free Trial →
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Dark Section -->
+    <div class="color-section-dark">
+        <div class="container">
+            <div class="text-center">
+                <p style="color: rgba(255,255,255,0.6); margin-bottom: var(--space-lg);">Trusted by teams at</p>
+                <div class="flex flex-center gap-xl">
+                    <div style="color: rgba(255,255,255,0.4); font-size: 1.5rem; font-weight: var(--font-light);">Company A</div>
+                    <div style="color: rgba(255,255,255,0.4); font-size: 1.5rem; font-weight: var(--font-light);">Company B</div>
+                    <div style="color: rgba(255,255,255,0.4); font-size: 1.5rem; font-weight: var(--font-light);">Company C</div>
+                    <div style="color: rgba(255,255,255,0.4); font-size: 1.5rem; font-weight: var(--font-light);">Company D</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
