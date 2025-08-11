@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from '@tanstack/react-router'
 import './MembershipPage.css'
 import Navigation from './Navigation'
 import { useAuth } from '../contexts/AuthContext'
 import CheckoutForm from './CheckoutForm'
 
 const MembershipPage = () => {
-  const navigate = useNavigate()
   const { register } = useAuth()
   const [selectedPlan, setSelectedPlan] = useState<'over40' | 'under40' | 'student' | null>(null)
   const [formData, setFormData] = useState({
