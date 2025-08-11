@@ -86,7 +86,16 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    // Role-based policies
+    options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
+    options.AddPolicy("MemberOrHigher", policy => policy.RequireRole("Admin", "Member"));
+    
+    // Future: Add more granular policies
+    // options.AddPolicy("CanEditEvents", policy => policy.RequireRole("Admin", "Marketing"));
+    // options.AddPolicy("CanViewFinances", policy => policy.RequireRole("Admin", "Finance"));
+});
 
 // Configure Stripe
 builder.Services.Configure<StripeSettings>(builder.Configuration.GetSection("Stripe"));

@@ -86,6 +86,7 @@ public class AuthController : ControllerBase
                 Email = user.Email,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
+                Role = user.Role,
                 ExpiresAt = expiresAt
             });
         }
@@ -137,6 +138,7 @@ public class AuthController : ControllerBase
                 Email = user.Email,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
+                Role = user.Role,
                 ExpiresAt = expiresAt
             });
         }
@@ -196,6 +198,7 @@ public class AuthController : ControllerBase
                 Email = user.Email,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
+                Role = user.Role,
                 DateOfBirth = user.DateOfBirth
             });
         }
@@ -216,6 +219,7 @@ public class AuthController : ControllerBase
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim(ClaimTypes.Name, user.Username),
             new Claim(ClaimTypes.Email, user.Email),
+            new Claim(ClaimTypes.Role, user.Role),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 
