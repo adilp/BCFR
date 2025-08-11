@@ -88,8 +88,10 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
+// Add /api prefix for local development to match frontend expectations
 if (app.Environment.IsDevelopment())
 {
+    app.UsePathBase("/api");
     app.UseSwagger();
     app.UseSwaggerUI();
 }
