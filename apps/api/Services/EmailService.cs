@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -83,7 +85,7 @@ namespace MemberOrgApi.Services
                                 box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
                             }
                             .header { 
-                                background: linear-gradient(135deg, #6B3AA0 0%, #4263EB 100%);
+                                background: #6B3AA0;
                                 color: white;
                                 padding: 48px 32px;
                                 text-align: center;
@@ -160,7 +162,7 @@ namespace MemberOrgApi.Services
                                 </div>
                                 <div class='content'>
                                     <h2>Hello " + firstName + " " + lastName + @",</h2>
-                                    <p>Thank you for joining the Birmingham Council on Foreign Relations! We're thrilled to have you as part of our distinguished community of global affairs enthusiasts.</p>
+                                    <p>Thank you for joining the Birmingham Committee on Foreign Relations! We're thrilled to have you as part of our distinguished community of global affairs enthusiasts.</p>
                                     <p>As a BCFR member, you now have access to:</p>
                                     <ul>
                                         <li>Exclusive speaker events with world-renowned experts</li>
@@ -176,7 +178,7 @@ namespace MemberOrgApi.Services
                                     <p>Best regards,<br/><strong>The BCFR Team</strong></p>
                                 </div>
                                 <div class='footer'>
-                                    <p><strong>Birmingham Council on Foreign Relations</strong></p>
+                                    <p><strong>Birmingham Committee on Foreign Relations</strong></p>
                                     <p>© 2025 BCFR. All rights reserved.</p>
                                     <p>You received this email because you registered at <a href='https://birminghamforeignrelations.org'>birminghamforeignrelations.org</a></p>
                                 </div>
@@ -187,7 +189,7 @@ namespace MemberOrgApi.Services
 
                 var textBody = "Welcome to BCFR!\n\n" +
                     "Hello " + firstName + " " + lastName + ",\n\n" +
-                    "Thank you for joining the Birmingham Council on Foreign Relations! We're thrilled to have you as part of our distinguished community.\n\n" +
+                    "Thank you for joining the Birmingham Committee on Foreign Relations! We're thrilled to have you as part of our distinguished community.\n\n" +
                     "As a BCFR member, you now have access to:\n" +
                     "- Exclusive speaker events with world-renowned experts\n" +
                     "- Thought-provoking discussions on international affairs\n" +
@@ -686,6 +688,192 @@ namespace MemberOrgApi.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to send custom email to " + toEmail);
+                return false;
+            }
+        }
+
+        public async Task<bool> SendBroadcastEmailAsync(List<string> toEmails, List<string>? ccEmails, List<string>? bccEmails, string subject, string bodyContent, bool isHtml = true)
+        {
+            try
+            {
+                var wrappedHtmlBody = @"
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <style>
+                            body { 
+                                font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', 'Roboto', sans-serif;
+                                line-height: 1.6;
+                                color: #212529;
+                                margin: 0;
+                                padding: 0;
+                                background-color: #fdf8f1;
+                            }
+                            .wrapper {
+                                background-color: #fdf8f1;
+                                padding: 40px 20px;
+                            }
+                            .container { 
+                                max-width: 600px;
+                                margin: 0 auto;
+                                background-color: #ffffff;
+                                border-radius: 12px;
+                                overflow: hidden;
+                                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+                            }
+                            .header { 
+                                background: #6B3AA0;
+                                color: white;
+                                padding: 48px 32px;
+                                text-align: center;
+                            }
+                            .header h1 {
+                                margin: 0;
+                                font-size: 32px;
+                                font-weight: 700;
+                                letter-spacing: -0.02em;
+                            }
+                            .content { 
+                                padding: 40px 32px;
+                                background-color: #ffffff;
+                            }
+                            .content h1 {
+                                color: #212529;
+                                font-size: 28px;
+                                font-weight: 700;
+                                margin: 0 0 16px 0;
+                                letter-spacing: -0.01em;
+                            }
+                            .content h2 {
+                                color: #212529;
+                                font-size: 24px;
+                                font-weight: 600;
+                                margin: 0 0 16px 0;
+                                letter-spacing: -0.01em;
+                            }
+                            .content h3 {
+                                color: #212529;
+                                font-size: 20px;
+                                font-weight: 600;
+                                margin: 0 0 12px 0;
+                            }
+                            .content p {
+                                color: #495057;
+                                font-size: 16px;
+                                line-height: 1.6;
+                                margin: 0 0 16px 0;
+                            }
+                            .content ul, .content ol {
+                                color: #495057;
+                                font-size: 16px;
+                                line-height: 1.8;
+                                margin: 16px 0;
+                                padding-left: 24px;
+                            }
+                            .content li {
+                                margin-bottom: 8px;
+                            }
+                            .content a {
+                                color: #4263EB;
+                                text-decoration: none;
+                            }
+                            .content a:hover {
+                                text-decoration: underline;
+                            }
+                            .content strong {
+                                font-weight: 600;
+                                color: #212529;
+                            }
+                            .content em {
+                                font-style: italic;
+                            }
+                            .content blockquote {
+                                border-left: 4px solid #FFC833;
+                                padding-left: 20px;
+                                margin: 20px 0;
+                                color: #6C757D;
+                                font-style: italic;
+                            }
+                            .button { 
+                                display: inline-block;
+                                padding: 14px 32px;
+                                background: #FFC833;
+                                color: #212529;
+                                text-decoration: none;
+                                border-radius: 8px;
+                                font-weight: 600;
+                                font-size: 16px;
+                                margin: 24px 0;
+                                transition: all 200ms ease;
+                            }
+                            .button:hover {
+                                background: #FFD45C;
+                            }
+                            .footer { 
+                                background-color: #F5F2ED;
+                                padding: 32px;
+                                text-align: center;
+                            }
+                            .footer p {
+                                color: #6C757D;
+                                font-size: 14px;
+                                margin: 0 0 8px 0;
+                            }
+                            .footer a {
+                                color: #4263EB;
+                                text-decoration: none;
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <div class='wrapper'>
+                            <div class='container'>
+                                <div class='header'>
+                                    <h1>Birmingham Committee on Foreign Relations</h1>
+                                </div>
+                                <div class='content'>
+                                    " + bodyContent + @"
+                                </div>
+                                <div class='footer'>
+                                    <p><strong>Birmingham Committee on Foreign Relations</strong></p>
+                                    <p>© 2025 BCFR. All rights reserved.</p>
+                                    <p>You received this email as a member of BCFR.</p>
+                                    <p><a href='" + _configuration["App:BaseUrl"] + @"/unsubscribe'>Unsubscribe</a> | <a href='" + _configuration["App:BaseUrl"] + @"'>Visit Our Website</a></p>
+                                </div>
+                            </div>
+                        </div>
+                    </body>
+                    </html>";
+
+                var textBody = System.Text.RegularExpressions.Regex.Replace(bodyContent, "<.*?>", string.Empty);
+                textBody = "Birmingham Committee on Foreign Relations\n\n" + textBody + "\n\n© 2025 BCFR. All rights reserved.";
+
+                var message = new EmailMessage
+                {
+                    From = _fromName + " <" + _fromEmail + ">",
+                    To = string.Join(",", toEmails),
+                    Subject = subject,
+                    HtmlBody = isHtml ? wrappedHtmlBody : null,
+                    TextBody = !isHtml ? bodyContent : textBody
+                };
+
+                if (ccEmails != null && ccEmails.Any())
+                {
+                    message.Cc = string.Join(",", ccEmails);
+                }
+
+                if (bccEmails != null && bccEmails.Any())
+                {
+                    message.Bcc = string.Join(",", bccEmails);
+                }
+
+                await _resend.EmailSendAsync(message);
+                _logger.LogInformation($"Broadcast email sent to {toEmails.Count} recipients with subject: {subject}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Failed to send broadcast email to {toEmails.Count} recipients");
                 return false;
             }
         }

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Navigation from './Navigation';
 import UserManagement from './UserManagement';
+import EmailComposer from './admin/EmailComposer';
 import { 
   ArrowTrendingUpIcon,
   ArrowTrendingDownIcon
@@ -12,7 +13,7 @@ import {
 } from '@heroicons/react/24/solid';
 import './AdminDashboard.css';
 
-type AdminView = 'overview' | 'users' | 'events' | 'finances' | 'reports';
+type AdminView = 'overview' | 'users' | 'events' | 'finances' | 'reports' | 'email';
 
 function AdminDashboard() {
   const [currentView, setCurrentView] = useState<AdminView>('overview');
@@ -23,6 +24,12 @@ function AdminDashboard() {
         return <DashboardOverview />;
       case 'users':
         return <UserManagement />;
+      case 'email':
+        return (
+          <div style={{ maxWidth: '1200px' }}>
+            <EmailComposer />
+          </div>
+        );
       case 'events':
         return <div className="placeholder-content">Events Management - Coming Soon</div>;
       case 'finances':
@@ -55,6 +62,12 @@ function AdminDashboard() {
             onClick={() => setCurrentView('users')}
           >
             Users
+          </button>
+          <button 
+            className={`admin-tab ${currentView === 'email' ? 'active' : ''}`}
+            onClick={() => setCurrentView('email')}
+          >
+            Email
           </button>
           <button 
             className={`admin-tab ${currentView === 'events' ? 'active' : ''}`}
