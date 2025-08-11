@@ -37,7 +37,9 @@ const Navigation = () => {
           <div className="nav-menu desktop-menu">
             <a href="/about" className="nav-link">About</a>
             <a href="/events" className="nav-link">Events</a>
-            <a href="/membership" className="nav-link">Membership</a>
+            {!isAuthenticated && (
+              <a href="/membership" className="nav-link">Membership</a>
+            )}
             {isAdmin && (
               <a href="/admin" className="nav-link">Admin</a>
             )}
@@ -45,7 +47,7 @@ const Navigation = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                 <span style={{ color: '#333' }}>Hi, {user?.firstName}!</span>
                 <a href="/profile" className="nav-link">My Profile</a>
-                <button onClick={handleLogout} className="login-btn">Logout</button>
+                <button onClick={handleLogout} className="nav-link" style={{ background: 'none', border: 'none', cursor: 'pointer' }}>Logout</button>
               </div>
             ) : (
               <a href="/login" className="login-btn">Member Login</a>
@@ -70,7 +72,9 @@ const Navigation = () => {
           <a href="/" className="mobile-nav-link" onClick={closeMobileMenu}>Home</a>
           <a href="/about" className="mobile-nav-link" onClick={closeMobileMenu}>About</a>
           <a href="/events" className="mobile-nav-link" onClick={closeMobileMenu}>Events</a>
-          <a href="/membership" className="mobile-nav-link" onClick={closeMobileMenu}>Membership</a>
+          {!isAuthenticated && (
+            <a href="/membership" className="mobile-nav-link" onClick={closeMobileMenu}>Membership</a>
+          )}
           {isAdmin && (
             <a href="/admin" className="mobile-nav-link" onClick={closeMobileMenu}>Admin</a>
           )}

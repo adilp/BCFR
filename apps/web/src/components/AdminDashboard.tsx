@@ -2,10 +2,6 @@ import { useState } from 'react';
 import Navigation from './Navigation';
 import UserManagement from './UserManagement';
 import { 
-  UserPlusIcon, 
-  CreditCardIcon, 
-  CalendarIcon,
-  ChartBarIcon,
   ArrowTrendingUpIcon,
   ArrowTrendingDownIcon
 } from '@heroicons/react/24/outline';
