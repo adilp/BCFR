@@ -4,6 +4,7 @@ using MemberOrgApi.Models;
 using MemberOrgApi.Data;
 using Microsoft.Extensions.Options;
 using Microsoft.EntityFrameworkCore;
+using System.Linq;
 
 namespace MemberOrgApi.Services
 {
@@ -150,6 +151,10 @@ namespace MemberOrgApi.Services
             }
 
             // Create new subscription record
+            // In Stripe.NET v48, CurrentPeriodEnd is on SubscriptionItem, not Subscription
+            var subscriptionItem = subscription.Items.Data.FirstOrDefault();
+            var currentPeriodEnd = subscriptionItem?.CurrentPeriodEnd ?? subscription.Created.AddYears(1);
+            
             var membershipSubscription = new MembershipSubscription
             {
                 UserId = userId,
@@ -157,10 +162,10 @@ namespace MemberOrgApi.Services
                 StripeCustomerId = customerId,
                 StripeSubscriptionId = subscriptionId,
                 Status = subscription.Status,
-                StartDate = subscription.StartDate,
-                EndDate = subscription.CurrentPeriodEnd,
-                NextBillingDate = subscription.CurrentPeriodEnd,
-                Amount = subscription.Items.Data[0].Price.UnitAmountDecimal / 100 ?? 0,
+                StartDate = subscription.Created,
+                EndDate = currentPeriodEnd,
+                NextBillingDate = currentPeriodEnd,
+                Amount = (subscription.Items.Data[0].Price.UnitAmountDecimal ?? 0) / 100,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
@@ -208,8 +213,9 @@ namespace MemberOrgApi.Services
 
             if (membershipSubscription != null)
             {
+                var subscriptionItem = subscription.Items.Data.FirstOrDefault();
                 membershipSubscription.Status = subscription.Status;
-                membershipSubscription.NextBillingDate = subscription.CurrentPeriodEnd;
+                membershipSubscription.NextBillingDate = subscriptionItem?.CurrentPeriodEnd ?? membershipSubscription.NextBillingDate;
                 membershipSubscription.UpdatedAt = DateTime.UtcNow;
                 
                 await dbContext.SaveChangesAsync();

@@ -80,7 +80,13 @@ namespace MemberOrgApi.Controllers
             
             try
             {
-                var stripeSignature = Request.Headers["Stripe-Signature"];
+                var stripeSignature = Request.Headers["Stripe-Signature"].ToString();
+                if (string.IsNullOrEmpty(stripeSignature))
+                {
+                    _logger.LogWarning("Stripe webhook called without signature");
+                    return BadRequest("Missing Stripe signature");
+                }
+                
                 await _stripeService.HandleWebhookAsync(json, stripeSignature);
                 return Ok();
             }
