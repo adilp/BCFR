@@ -7,7 +7,7 @@ using Stripe;
 namespace MemberOrgApi.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("[controller]")]
     public class StripeController : ControllerBase
     {
         private readonly IStripeService _stripeService;
