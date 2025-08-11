@@ -23,6 +23,7 @@ public class AppDbContext : DbContext
         // Configure User entity
         modelBuilder.Entity<User>(entity =>
         {
+            entity.ToTable("Users"); // Explicitly set table name to match production DB
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Username).IsRequired().HasMaxLength(100);
             entity.HasIndex(e => e.Username).IsUnique();
@@ -36,6 +37,7 @@ public class AppDbContext : DbContext
         // Configure Session entity
         modelBuilder.Entity<Session>(entity =>
         {
+            entity.ToTable("Sessions"); // Explicitly set table name to match production DB
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Token).IsRequired();
             entity.HasIndex(e => e.Token).IsUnique();
