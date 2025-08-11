@@ -838,7 +838,7 @@ namespace MemberOrgApi.Services
                                     <p><strong>Birmingham Committee on Foreign Relations</strong></p>
                                     <p>© 2025 BCFR. All rights reserved.</p>
                                     <p>You received this email as a member of BCFR.</p>
-                                    <p><a href='" + _configuration["App:BaseUrl"] + @"/unsubscribe'>Unsubscribe</a> | <a href='" + _configuration["App:BaseUrl"] + @"'>Visit Our Website</a></p>
+                                    <p><a href='" + _configuration["App:BaseUrl"] + @"'>Visit Our Website</a></p>
                                 </div>
                             </div>
                         </div>
