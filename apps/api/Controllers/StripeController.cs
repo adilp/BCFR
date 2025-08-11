@@ -44,6 +44,36 @@ namespace MemberOrgApi.Controllers
             });
         }
 
+        [HttpGet("calculate-fees/{membershipTier}")]
+        public IActionResult CalculateFees(string membershipTier)
+        {
+            // Define base prices for each tier (should match your Stripe prices)
+            var basePrice = membershipTier.ToLower() switch
+            {
+                "over40" => 300m,
+                "under40" => 200m,
+                "student" => 75m,
+                _ => 0m
+            };
+
+            if (basePrice == 0)
+            {
+                return BadRequest("Invalid membership tier");
+            }
+
+            // Calculate processing fee (2.9% + $0.30)
+            var processingFee = Math.Round((basePrice * 0.029m) + 0.30m, 2);
+            var total = basePrice + processingFee;
+
+            return Ok(new
+            {
+                basePrice,
+                processingFee,
+                total,
+                breakdown = $"Membership: ${basePrice:F2} + Processing Fee: ${processingFee:F2} = Total: ${total:F2}"
+            });
+        }
+
         [HttpPost("create-checkout-session")]
         [Authorize]
         public async Task<IActionResult> CreateCheckoutSession([FromBody] CreateCheckoutSessionRequest request)
@@ -64,7 +94,14 @@ namespace MemberOrgApi.Controllers
                     userId
                 );
 
-                return Ok(new { sessionId = session.Id, url = session.Url });
+                // Extract processing fee from metadata
+                session.Metadata.TryGetValue("processingFee", out var processingFee);
+
+                return Ok(new { 
+                    sessionId = session.Id, 
+                    url = session.Url,
+                    processingFee = processingFee ?? "0"
+                });
             }
             catch (Exception ex)
             {

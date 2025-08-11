@@ -40,17 +40,47 @@ namespace MemberOrgApi.Services
                 _ => throw new ArgumentException($"Invalid membership tier: {membershipTier}")
             };
 
+            // Get the subscription price to calculate processing fee
+            var priceService = new PriceService();
+            var price = await priceService.GetAsync(priceId);
+            var subscriptionAmount = (price.UnitAmountDecimal ?? 0) / 100;
+            
+            // Calculate processing fee (2.9% + $0.30)
+            var processingFee = Math.Round((subscriptionAmount * 0.029m) + 0.30m, 2);
+            var processingFeeCents = (long)(processingFee * 100);
+
+            var lineItems = new List<SessionLineItemOptions>
+            {
+                new SessionLineItemOptions
+                {
+                    Price = priceId,
+                    Quantity = 1,
+                }
+            };
+
+            // Add processing fee as a one-time line item
+            if (processingFeeCents > 0)
+            {
+                lineItems.Add(new SessionLineItemOptions
+                {
+                    PriceData = new SessionLineItemPriceDataOptions
+                    {
+                        Currency = "usd",
+                        UnitAmount = processingFeeCents,
+                        ProductData = new SessionLineItemPriceDataProductDataOptions
+                        {
+                            Name = "Processing Fee",
+                            Description = "One-time fee to cover payment processing costs"
+                        }
+                    },
+                    Quantity = 1
+                });
+            }
+
             var options = new SessionCreateOptions
             {
                 PaymentMethodTypes = new List<string> { "card" },
-                LineItems = new List<SessionLineItemOptions>
-                {
-                    new SessionLineItemOptions
-                    {
-                        Price = priceId,
-                        Quantity = 1,
-                    }
-                },
+                LineItems = lineItems,
                 Mode = "subscription",
                 SuccessUrl = "https://birminghamforeignrelations.org/membership/success?session_id={CHECKOUT_SESSION_ID}",
                 CancelUrl = "https://birminghamforeignrelations.org/membership",
@@ -58,7 +88,8 @@ namespace MemberOrgApi.Services
                 Metadata = new Dictionary<string, string>
                 {
                     { "userId", userId },
-                    { "membershipTier", membershipTier }
+                    { "membershipTier", membershipTier },
+                    { "processingFee", processingFee.ToString() }
                 }
             };
 
@@ -102,6 +133,10 @@ namespace MemberOrgApi.Services
                     case "customer.subscription.updated":
                         var updatedSubscription = stripeEvent.Data.Object as Stripe.Subscription;
                         await HandleSubscriptionUpdated(updatedSubscription);
+                        break;
+                    case "invoice.created":
+                        var invoice = stripeEvent.Data.Object as Stripe.Invoice;
+                        await HandleInvoiceCreated(invoice);
                         break;
                     default:
                         _logger.LogInformation($"Unhandled event type: {stripeEvent.Type}");
@@ -220,6 +255,49 @@ namespace MemberOrgApi.Services
                 
                 await dbContext.SaveChangesAsync();
                 _logger.LogInformation($"Subscription {subscription.Id} updated in database with status: {subscription.Status}");
+            }
+        }
+
+        private async Task HandleInvoiceCreated(Stripe.Invoice? invoice)
+        {
+            if (invoice == null) return;
+            
+            // Only process subscription renewal invoices (not the first invoice)
+            if (string.IsNullOrEmpty(invoice.SubscriptionId) || invoice.BillingReason != "subscription_cycle")
+            {
+                _logger.LogInformation($"Skipping invoice {invoice.Id} - not a subscription renewal");
+                return;
+            }
+
+            _logger.LogInformation($"Processing renewal invoice {invoice.Id} for subscription {invoice.SubscriptionId}");
+
+            try
+            {
+                // Calculate the subscription amount and processing fee
+                var subscriptionAmount = (invoice.Subtotal ?? 0) / 100m; // Convert from cents to dollars
+                var processingFee = Math.Round((subscriptionAmount * 0.029m) + 0.30m, 2);
+                var processingFeeCents = (long)(processingFee * 100);
+
+                if (processingFeeCents > 0)
+                {
+                    // Add processing fee as an invoice item
+                    var invoiceItemService = new InvoiceItemService();
+                    var invoiceItem = await invoiceItemService.CreateAsync(new InvoiceItemCreateOptions
+                    {
+                        Customer = invoice.CustomerId,
+                        Invoice = invoice.Id,
+                        Amount = processingFeeCents,
+                        Currency = "usd",
+                        Description = "Processing Fee - covers payment processing costs"
+                    });
+
+                    _logger.LogInformation($"Added processing fee of ${processingFee} to invoice {invoice.Id}");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error adding processing fee to invoice {invoice.Id}");
+                // Don't throw - we don't want to fail the webhook if we can't add the fee
             }
         }
     }
