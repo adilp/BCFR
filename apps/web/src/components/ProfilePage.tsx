@@ -8,10 +8,12 @@ import { apiClient } from '../services/api'
 interface SubscriptionData {
   id: string
   status: string
-  plan: string
+  membershipTier: string
   amount: number
   nextBillingDate: string
   startDate: string
+  endDate?: string
+  createdAt: string
 }
 
 interface PaymentHistory {
@@ -27,7 +29,7 @@ const ProfilePage = () => {
   const { user, isAuthenticated } = useAuth()
   const navigate = useNavigate()
   const [isEditing, setIsEditing] = useState(false)
-  const [activeTab, setActiveTab] = useState<'profile' | 'subscription' | 'payments'>('profile')
+  const [activeTab, setActiveTab] = useState<'profile' | 'subscription'>('profile')
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null)
   const [paymentHistory, setPaymentHistory] = useState<PaymentHistory[]>([])
   const [loading, setLoading] = useState(false)
@@ -56,7 +58,6 @@ const ProfilePage = () => {
     if (user) {
       fetchProfileData()
       fetchSubscriptionData()
-      fetchPaymentHistory()
     }
   }, [user])
 
@@ -95,19 +96,11 @@ const ProfilePage = () => {
   const fetchSubscriptionData = async () => {
     setLoading(true)
     try {
-      const response = await apiClient.get('/subscription')
+      const response = await apiClient.get('/profile/subscription')
       setSubscription(response.data)
     } catch (error) {
       console.error('Failed to fetch subscription:', error)
-      // Mock data for now
-      setSubscription({
-        id: 'sub_123',
-        status: 'active',
-        plan: 'Individual Membership',
-        amount: 125,
-        nextBillingDate: '2025-01-10',
-        startDate: '2024-01-10'
-      })
+      setSubscription(null)
     } finally {
       setLoading(false)
     }
@@ -209,12 +202,6 @@ const ProfilePage = () => {
             onClick={() => setActiveTab('subscription')}
           >
             Subscription
-          </button>
-          <button 
-            className={`tab ${activeTab === 'payments' ? 'active' : ''}`}
-            onClick={() => setActiveTab('payments')}
-          >
-            Payment History
           </button>
         </div>
 
@@ -409,8 +396,8 @@ const ProfilePage = () => {
                   
                   <div className="subscription-details">
                     <div className="detail-row">
-                      <span className="detail-label">Plan</span>
-                      <span className="detail-value">{subscription.plan}</span>
+                      <span className="detail-label">Membership Tier</span>
+                      <span className="detail-value">{subscription.membershipTier}</span>
                     </div>
                     <div className="detail-row">
                       <span className="detail-label">Amount</span>
@@ -424,11 +411,6 @@ const ProfilePage = () => {
                       <span className="detail-label">Next Billing Date</span>
                       <span className="detail-value">{formatDate(subscription.nextBillingDate)}</span>
                     </div>
-                  </div>
-
-                  <div className="subscription-actions">
-                    <button className="btn btn-secondary">Update Payment Method</button>
-                    <button className="btn btn-ghost" disabled>Cancel Subscription</button>
                   </div>
                 </div>
               ) : (
@@ -448,56 +430,6 @@ const ProfilePage = () => {
             </div>
           )}
 
-          {activeTab === 'payments' && (
-            <div className="payments-section">
-              <div className="card">
-                <div className="card-header">
-                  <h2 className="card-title">Payment History</h2>
-                </div>
-
-                {paymentHistory.length > 0 ? (
-                  <div className="payments-table-container">
-                    <table className="payments-table">
-                      <thead>
-                        <tr>
-                          <th>Date</th>
-                          <th>Description</th>
-                          <th>Amount</th>
-                          <th>Status</th>
-                          <th>Invoice</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {paymentHistory.map(payment => (
-                          <tr key={payment.id}>
-                            <td>{formatDate(payment.date)}</td>
-                            <td>{payment.description}</td>
-                            <td>{formatCurrency(payment.amount)}</td>
-                            <td>
-                              <span className={`tag tag-${payment.status === 'completed' ? 'green' : 'gray'}`}>
-                                {payment.status}
-                              </span>
-                            </td>
-                            <td>
-                              {payment.invoiceUrl && (
-                                <a href={payment.invoiceUrl} className="invoice-link">
-                                  Download
-                                </a>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <div className="empty-state">
-                    <p>No payment history available.</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>
