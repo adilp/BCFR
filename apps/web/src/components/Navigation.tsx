@@ -34,7 +34,7 @@ const Navigation = () => {
           {/* Desktop Menu */}
           <div className="nav-menu desktop-menu">
             <a href="/about" className="nav-link">About</a>
-            <a href="#events" className="nav-link">Events</a>
+            <a href="/events" className="nav-link">Events</a>
             <a href="/membership" className="nav-link">Membership</a>
             {isAuthenticated ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -64,7 +64,7 @@ const Navigation = () => {
         <div className={`mobile-menu ${isMobileMenuOpen ? 'open' : ''}`}>
           <a href="/" className="mobile-nav-link" onClick={closeMobileMenu}>Home</a>
           <a href="/about" className="mobile-nav-link" onClick={closeMobileMenu}>About</a>
-          <a href="#events" className="mobile-nav-link" onClick={closeMobileMenu}>Events</a>
+          <a href="/events" className="mobile-nav-link" onClick={closeMobileMenu}>Events</a>
           <a href="/membership" className="mobile-nav-link" onClick={closeMobileMenu}>Membership</a>
           {isAuthenticated ? (
             <>

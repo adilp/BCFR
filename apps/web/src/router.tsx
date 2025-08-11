@@ -5,6 +5,7 @@ import AboutPage from './components/AboutPage'
 import LoginPage from './components/LoginPage'
 import MembershipSuccess from './components/MembershipSuccess'
 import ProfilePage from './components/ProfilePage'
+import EventsPage from './components/EventsPage'
 
 // Create root route
 const rootRoute = createRootRoute({
@@ -53,8 +54,15 @@ const profileRoute = createRoute({
   component: ProfilePage
 })
 
+// Create events page route
+const eventsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/events',
+  component: EventsPage
+})
+
 // Create the route tree
-const routeTree = rootRoute.addChildren([indexRoute, membershipRoute, membershipSuccessRoute, aboutRoute, loginRoute, profileRoute])
+const routeTree = rootRoute.addChildren([indexRoute, membershipRoute, membershipSuccessRoute, aboutRoute, loginRoute, profileRoute, eventsRoute])
 
 // Create the router
 export const router = createRouter({ routeTree })

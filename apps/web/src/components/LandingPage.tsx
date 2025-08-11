@@ -1,6 +1,7 @@
 import './LandingPage.css'
 import { GlobeAltIcon, UserGroupIcon, AcademicCapIcon } from '@heroicons/react/24/solid'
 import Navigation from './Navigation'
+import EventsList from './EventsList'
 
 const LandingPage = () => {
 
@@ -62,43 +63,7 @@ const LandingPage = () => {
       {/* Events Section */}
       <section id="events" className="section events-section">
         <div className="container">
-          <div className="section-header">
-            <h2 className="section-title">Upcoming Events</h2>
-            <p className="section-subtitle">Join us for thought-provoking discussions on global affairs</p>
-          </div>
-
-          <div className="event-card">
-            <div className="event-date">
-              <div className="event-date-day">15</div>
-              <div className="event-date-month">FEB</div>
-            </div>
-            <div className="event-details">
-              <h3>The Future of NATO: Challenges and Opportunities</h3>
-              <p>Ambassador Jane Smith discusses the evolving role of NATO in global security</p>
-            </div>
-          </div>
-
-          <div className="event-card">
-            <div className="event-date">
-              <div className="event-date-day">22</div>
-              <div className="event-date-month">FEB</div>
-            </div>
-            <div className="event-details">
-              <h3>Economic Diplomacy in the 21st Century</h3>
-              <p>Panel discussion on trade relations and economic partnerships</p>
-            </div>
-          </div>
-
-          <div className="event-card">
-            <div className="event-date">
-              <div className="event-date-day">08</div>
-              <div className="event-date-month">MAR</div>
-            </div>
-            <div className="event-details">
-              <h3>Climate Change and International Cooperation</h3>
-              <p>Exploring global solutions to environmental challenges</p>
-            </div>
-          </div>
+          <EventsList />
         </div>
       </section>
 
