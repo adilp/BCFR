@@ -24,7 +24,11 @@ if (builder.Environment.IsProduction())
 }
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(connectionString));
+    options.UseNpgsql(connectionString, npgsqlOptions =>
+    {
+        // Configure the migrations history table to use our custom schema
+        npgsqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "memberorg");
+    }));
 
 // Add CORS
 builder.Services.AddCors(options =>
@@ -54,7 +58,28 @@ if (app.Environment.IsProduction())
     using (var scope = app.Services.CreateScope())
     {
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        dbContext.Database.Migrate();
+        
+        try
+        {
+            // Ensure the memberorg schema exists before running migrations
+            dbContext.Database.ExecuteSqlRaw(@"
+                DO $$ 
+                BEGIN
+                    IF NOT EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = 'memberorg') THEN
+                        CREATE SCHEMA memberorg;
+                    END IF;
+                END $$;
+            ");
+            
+            // Now run migrations
+            dbContext.Database.Migrate();
+        }
+        catch (Exception ex)
+        {
+            var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+            logger.LogError(ex, "An error occurred while migrating the database.");
+            throw;
+        }
     }
 }
 
