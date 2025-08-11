@@ -3,7 +3,7 @@ import { ApiClient } from '@memberorg/api-client'
 import { APP_NAME } from '@memberorg/shared'
 import './App.css'
 
-const apiClient = new ApiClient('http://localhost:5000')
+const apiClient = new ApiClient('http://localhost:5001')
 
 function App() {
   const [message, setMessage] = useState<string>('Loading...')

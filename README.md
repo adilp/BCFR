@@ -18,8 +18,8 @@ yarn dev
 #### Terminal 1 - API:
 ```bash
 yarn api
-# API runs at http://localhost:5000
-# Swagger UI at http://localhost:5000/swagger
+# API runs at http://localhost:5001
+# Swagger UI at http://localhost:5001/swagger
 ```
 
 #### Terminal 2 - Web:
@@ -38,5 +38,5 @@ yarn mobile
 ## Troubleshooting
 
 1. **Mobile can't connect to API**: Use your computer's IP address instead of localhost in the mobile app
-2. **Port conflicts**: Make sure ports 5000 (API) and 5173 (web) are free
+2. **Port conflicts**: Make sure ports 5001 (API) and 5173 (web) are free
 3. **CORS errors**: The API is configured to allow all origins in development
