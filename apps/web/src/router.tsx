@@ -4,6 +4,7 @@ import MembershipPage from './components/MembershipPage'
 import AboutPage from './components/AboutPage'
 import LoginPage from './components/LoginPage'
 import MembershipSuccess from './components/MembershipSuccess'
+import ProfilePage from './components/ProfilePage'
 
 // Create root route
 const rootRoute = createRootRoute({
@@ -45,8 +46,15 @@ const membershipSuccessRoute = createRoute({
   component: MembershipSuccess
 })
 
+// Create profile page route
+const profileRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/profile',
+  component: ProfilePage
+})
+
 // Create the route tree
-const routeTree = rootRoute.addChildren([indexRoute, membershipRoute, membershipSuccessRoute, aboutRoute, loginRoute])
+const routeTree = rootRoute.addChildren([indexRoute, membershipRoute, membershipSuccessRoute, aboutRoute, loginRoute, profileRoute])
 
 // Create the router
 export const router = createRouter({ routeTree })
