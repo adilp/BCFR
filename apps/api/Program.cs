@@ -101,12 +101,24 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-// Do not run migrations automatically in production
-// Migrations must be run manually to avoid permission issues with DigitalOcean's managed PostgreSQL
-if (app.Environment.IsProduction())
+// Run migrations automatically on startup
+using (var scope = app.Services.CreateScope())
 {
-    var logger = app.Services.GetRequiredService<ILogger<Program>>();
-    logger.LogInformation("Skipping automatic migrations. Run migrations manually using: dotnet ef database update");
+    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    
+    try
+    {
+        logger.LogInformation("Running database migrations...");
+        await dbContext.Database.MigrateAsync();
+        logger.LogInformation("Database migrations completed successfully");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "An error occurred while migrating the database");
+        // Don't throw - let the app start even if migrations fail
+        // This allows you to debug the issue
+    }
 }
 
 app.Run();
