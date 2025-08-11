@@ -8,14 +8,10 @@ interface EmailComposerProps {
 
 const EmailComposer: React.FC<EmailComposerProps> = ({ className = '' }) => {
   const [toEmails, setToEmails] = useState('');
-  const [ccEmails, setCcEmails] = useState('');
-  const [bccEmails, setBccEmails] = useState('');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [isHtml, setIsHtml] = useState(true);
   const [sending, setSending] = useState(false);
-  const [showCc, setShowCc] = useState(false);
-  const [showBcc, setShowBcc] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const editorRef = useRef<HTMLDivElement>(null);
 
@@ -62,8 +58,6 @@ const EmailComposer: React.FC<EmailComposerProps> = ({ className = '' }) => {
 
   const handleSendEmail = async () => {
     const toEmailList = parseEmails(toEmails);
-    const ccEmailList = parseEmails(ccEmails);
-    const bccEmailList = parseEmails(bccEmails);
 
     if (toEmailList.length === 0) {
       setMessage({ type: 'error', text: 'Please enter at least one recipient email address' });
@@ -71,8 +65,7 @@ const EmailComposer: React.FC<EmailComposerProps> = ({ className = '' }) => {
     }
 
     // Validate all email addresses
-    const allEmails = [...toEmailList, ...ccEmailList, ...bccEmailList];
-    const invalidEmails = allEmails.filter(email => !validateEmail(email));
+    const invalidEmails = toEmailList.filter(email => !validateEmail(email));
     
     if (invalidEmails.length > 0) {
       setMessage({ 
@@ -98,8 +91,6 @@ const EmailComposer: React.FC<EmailComposerProps> = ({ className = '' }) => {
     try {
       const response = await api.post('/adminemail/send', {
         toEmails: toEmailList,
-        ccEmails: ccEmailList.length > 0 ? ccEmailList : null,
-        bccEmails: bccEmailList.length > 0 ? bccEmailList : null,
         subject,
         body,
         isHtml
@@ -109,15 +100,11 @@ const EmailComposer: React.FC<EmailComposerProps> = ({ className = '' }) => {
         setMessage({ type: 'success', text: response.data.message });
         // Clear form
         setToEmails('');
-        setCcEmails('');
-        setBccEmails('');
         setSubject('');
         setBody('');
         if (editorRef.current) {
           editorRef.current.innerHTML = '';
         }
-        setShowCc(false);
-        setShowBcc(false);
       } else {
         setMessage({ type: 'error', text: response.data.message || 'Failed to send email' });
       }
@@ -158,21 +145,7 @@ const EmailComposer: React.FC<EmailComposerProps> = ({ className = '' }) => {
 
         <div className="email-composer-body">
           <div className="email-field-group">
-            <div className="email-field-header">
-              <label htmlFor="to-emails" className="email-label">To:</label>
-              <div className="email-actions">
-                {!showCc && (
-                  <button onClick={() => setShowCc(true)} className="email-link-btn">
-                    Add Cc
-                  </button>
-                )}
-                {!showBcc && (
-                  <button onClick={() => setShowBcc(true)} className="email-link-btn">
-                    Add Bcc
-                  </button>
-                )}
-              </div>
-            </div>
+            <label htmlFor="to-emails" className="email-label">Recipients:</label>
             <input
               type="text"
               id="to-emails"
@@ -181,58 +154,8 @@ const EmailComposer: React.FC<EmailComposerProps> = ({ className = '' }) => {
               placeholder="Enter email addresses separated by commas (e.g., user1@example.com, user2@example.com)"
               className="email-input"
             />
-            <small className="email-help-text">Separate multiple emails with commas</small>
+            <small className="email-help-text">Each recipient will receive an individual email (privacy protected)</small>
           </div>
-
-          {showCc && (
-            <div className="email-field-group">
-              <div className="email-field-header">
-                <label htmlFor="cc-emails" className="email-label">Cc:</label>
-                <button 
-                  onClick={() => {
-                    setShowCc(false);
-                    setCcEmails('');
-                  }} 
-                  className="email-link-btn email-link-remove"
-                >
-                  Remove
-                </button>
-              </div>
-              <input
-                type="text"
-                id="cc-emails"
-                value={ccEmails}
-                onChange={(e) => setCcEmails(e.target.value)}
-                placeholder="Enter CC email addresses separated by commas"
-                className="email-input"
-              />
-            </div>
-          )}
-
-          {showBcc && (
-            <div className="email-field-group">
-              <div className="email-field-header">
-                <label htmlFor="bcc-emails" className="email-label">Bcc:</label>
-                <button 
-                  onClick={() => {
-                    setShowBcc(false);
-                    setBccEmails('');
-                  }} 
-                  className="email-link-btn email-link-remove"
-                >
-                  Remove
-                </button>
-              </div>
-              <input
-                type="text"
-                id="bcc-emails"
-                value={bccEmails}
-                onChange={(e) => setBccEmails(e.target.value)}
-                placeholder="Enter BCC email addresses separated by commas"
-                className="email-input"
-              />
-            </div>
-          )}
 
           <div className="email-field-group">
             <label htmlFor="subject" className="email-label">Subject:</label>
@@ -305,7 +228,7 @@ const EmailComposer: React.FC<EmailComposerProps> = ({ className = '' }) => {
 
         <div className="email-composer-footer">
           <div className="email-footer-info">
-            The email will be sent with the BCFR template styling
+            Emails will be sent individually to each recipient with BCFR template styling
           </div>
           <button
             onClick={handleSendEmail}
@@ -338,9 +261,9 @@ const EmailComposer: React.FC<EmailComposerProps> = ({ className = '' }) => {
         </div>
         <ul className="email-tips-list">
           <li>Enter multiple email addresses separated by commas</li>
+          <li>Each recipient receives an individual email for privacy</li>
+          <li>Recipients won't see other email addresses</li>
           <li>All emails are automatically wrapped in the BCFR template</li>
-          <li>Use CC for recipients who should see other recipients</li>
-          <li>Use BCC to hide recipient emails from each other</li>
           <li>You can use HTML formatting for rich text content</li>
           <li>Test your email with a small group before sending to all members</li>
         </ul>

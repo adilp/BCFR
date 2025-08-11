@@ -692,7 +692,7 @@ namespace MemberOrgApi.Services
             }
         }
 
-        public async Task<bool> SendBroadcastEmailAsync(List<string> toEmails, List<string>? ccEmails, List<string>? bccEmails, string subject, string bodyContent, bool isHtml = true)
+        public async Task<bool> SendBroadcastEmailAsync(List<string> toEmails, string subject, string bodyContent, bool isHtml = true)
         {
             try
             {
@@ -848,12 +848,7 @@ namespace MemberOrgApi.Services
                 var textBody = System.Text.RegularExpressions.Regex.Replace(bodyContent, "<.*?>", string.Empty);
                 textBody = "Birmingham Committee on Foreign Relations\n\n" + textBody + "\n\n© 2025 BCFR. All rights reserved.";
 
-                // Resend requires sending to each recipient individually when using multiple addresses
-                // We'll send to the first recipient with CC/BCC for others, or send individually
-                
-                // For broadcast emails, send to each recipient individually to avoid exposing emails
-                var tasks = new List<Task<bool>>();
-                
+                // Send individual emails to each recipient to maintain privacy
                 foreach (var toEmail in toEmails)
                 {
                     var message = new EmailMessage
@@ -865,34 +860,10 @@ namespace MemberOrgApi.Services
                         TextBody = !isHtml ? bodyContent : textBody
                     };
 
-                    // Add CC and BCC only to the first email to avoid duplicates
-                    if (toEmail == toEmails.First())
-                    {
-                        if (ccEmails != null && ccEmails.Any())
-                        {
-                            // Send CC emails individually as well
-                            foreach (var ccEmail in ccEmails)
-                            {
-                                message.Cc = ccEmail;
-                                break; // Only one CC per message
-                            }
-                        }
-
-                        if (bccEmails != null && bccEmails.Any())
-                        {
-                            // Send BCC emails individually as well
-                            foreach (var bccEmail in bccEmails)
-                            {
-                                message.Bcc = bccEmail;
-                                break; // Only one BCC per message
-                            }
-                        }
-                    }
-
                     await _resend.EmailSendAsync(message);
                 }
                 
-                _logger.LogInformation($"Broadcast email sent to {toEmails.Count} recipients with subject: {subject}");
+                _logger.LogInformation($"Broadcast email sent to {toEmails.Count} individual recipients with subject: {subject}");
                 return true;
             }
             catch (Exception ex)

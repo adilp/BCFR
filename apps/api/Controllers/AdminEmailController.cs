@@ -27,8 +27,6 @@ namespace MemberOrgApi.Controllers
         public class SendEmailRequest
         {
             public List<string> ToEmails { get; set; } = new List<string>();
-            public List<string>? CcEmails { get; set; }
-            public List<string>? BccEmails { get; set; }
             public string Subject { get; set; } = string.Empty;
             public string Body { get; set; } = string.Empty;
             public bool IsHtml { get; set; } = true;
@@ -83,28 +81,6 @@ namespace MemberOrgApi.Controllers
                     }
                 }
 
-                if (request.CcEmails != null)
-                {
-                    foreach (var email in request.CcEmails)
-                    {
-                        if (!IsValidEmail(email))
-                        {
-                            invalidEmails.Add(email);
-                        }
-                    }
-                }
-
-                if (request.BccEmails != null)
-                {
-                    foreach (var email in request.BccEmails)
-                    {
-                        if (!IsValidEmail(email))
-                        {
-                            invalidEmails.Add(email);
-                        }
-                    }
-                }
-
                 if (invalidEmails.Any())
                 {
                     return BadRequest(new SendEmailResponse 
@@ -116,8 +92,6 @@ namespace MemberOrgApi.Controllers
 
                 var result = await _emailService.SendBroadcastEmailAsync(
                     request.ToEmails,
-                    request.CcEmails,
-                    request.BccEmails,
                     request.Subject,
                     request.Body,
                     request.IsHtml
@@ -125,16 +99,14 @@ namespace MemberOrgApi.Controllers
 
                 if (result)
                 {
-                    var totalRecipients = request.ToEmails.Count + 
-                                        (request.CcEmails?.Count ?? 0) + 
-                                        (request.BccEmails?.Count ?? 0);
+                    var totalRecipients = request.ToEmails.Count;
                     
-                    _logger.LogInformation($"Admin sent email to {totalRecipients} recipients with subject: {request.Subject}");
+                    _logger.LogInformation($"Admin sent individual emails to {totalRecipients} recipients with subject: {request.Subject}");
                     
                     return Ok(new SendEmailResponse
                     {
                         Success = true,
-                        Message = $"Email successfully sent to {totalRecipients} recipient(s)",
+                        Message = $"Email successfully sent individually to {totalRecipients} recipient(s)",
                         RecipientCount = totalRecipients
                     });
                 }
