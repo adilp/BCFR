@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import './MembershipPage.css'
 import Navigation from './Navigation'
@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext'
 const MembershipPage = () => {
   const navigate = useNavigate()
   const { register } = useAuth()
-  const [selectedPlan, setSelectedPlan] = useState<'individual' | 'family' | 'student'>('individual')
+  const [selectedPlan, setSelectedPlan] = useState<'over40' | 'under40' | 'student' | null>(null)
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -20,6 +20,40 @@ const MembershipPage = () => {
   })
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [age, setAge] = useState<number | null>(null)
+
+  // Calculate age from date of birth
+  const calculateAge = (dob: string): number => {
+    const birthDate = new Date(dob)
+    const today = new Date()
+    let age = today.getFullYear() - birthDate.getFullYear()
+    const monthDiff = today.getMonth() - birthDate.getMonth()
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--
+    }
+    return age
+  }
+
+  // Auto-select membership tier based on DOB and email
+  useEffect(() => {
+    // Check if email has .edu domain
+    const isStudent = formData.email.toLowerCase().includes('.edu')
+    
+    if (isStudent) {
+      setSelectedPlan('student')
+    } else if (formData.dateOfBirth) {
+      const userAge = calculateAge(formData.dateOfBirth)
+      setAge(userAge)
+      if (userAge >= 40) {
+        setSelectedPlan('over40')
+      } else {
+        setSelectedPlan('under40')
+      }
+    } else {
+      setSelectedPlan(null)
+      setAge(null)
+    }
+  }, [formData.dateOfBirth, formData.email])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -37,6 +71,12 @@ const MembershipPage = () => {
     // Validate passwords match
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match')
+      return
+    }
+
+    // Validate membership tier is selected
+    if (!selectedPlan) {
+      setError('Please enter your date of birth and email to determine your membership tier')
       return
     }
 
@@ -73,17 +113,40 @@ const MembershipPage = () => {
       <div className="membership-container">
         {/* Pricing Section */}
         <section className="pricing-section">
-          <h1 className="membership-title">Choose Your Membership</h1>
+          <h1 className="membership-title">Birmingham Council on Foreign Relations Membership</h1>
           <p className="membership-subtitle">Join Birmingham's premier forum for international affairs</p>
+
+          {/* Eligibility Rules Notice */}
+          <div style={{
+            backgroundColor: '#f0f7ff',
+            border: '1px solid #4263EB',
+            borderRadius: '8px',
+            padding: '1rem',
+            marginBottom: '2rem',
+            maxWidth: '800px',
+            margin: '0 auto 2rem'
+          }}>
+            <h3 style={{ color: '#4263EB', marginBottom: '0.5rem', fontSize: '1rem' }}>
+              📋 Membership Tier Eligibility
+            </h3>
+            <ul style={{ margin: 0, paddingLeft: '1.5rem', color: '#333', fontSize: '0.9rem' }}>
+              <li><strong>Over 40 Membership ($300/year):</strong> Members aged 40 and above</li>
+              <li><strong>Under 40 Membership ($200/year):</strong> Members under 40 years of age</li>
+              <li><strong>Student Membership ($75/year):</strong> Current students with a valid .edu email address</li>
+            </ul>
+            <p style={{ marginTop: '0.5rem', color: '#666', fontSize: '0.85rem', fontStyle: 'italic' }}>
+              Your membership tier will be automatically determined based on your date of birth and email address.
+            </p>
+          </div>
 
           <div className="pricing-grid">
             <div 
-              className={`pricing-card ${selectedPlan === 'individual' ? 'selected' : ''}`}
-              onClick={() => setSelectedPlan('individual')}
+              className={`pricing-card ${selectedPlan === 'over40' ? 'selected' : ''}`}
+              style={{ cursor: 'default', opacity: selectedPlan === null ? 0.6 : 1 }}
             >
-              <h3 className="pricing-tier">Individual</h3>
+              <h3 className="pricing-tier">Over 40</h3>
               <div className="pricing-amount">
-                <span className="price">$125</span>
+                <span className="price">$300</span>
                 <span className="period">/year</span>
               </div>
               <ul className="pricing-features">
@@ -91,35 +154,61 @@ const MembershipPage = () => {
                 <li>✓ Monthly newsletter</li>
                 <li>✓ Member directory access</li>
                 <li>✓ Voting rights</li>
+                <li>✓ Special interest groups</li>
+                <li>✓ Leadership opportunities</li>
               </ul>
+              {selectedPlan === 'over40' && (
+                <div style={{ 
+                  marginTop: '1rem', 
+                  padding: '0.5rem', 
+                  backgroundColor: '#4263EB', 
+                  color: 'white', 
+                  borderRadius: '4px',
+                  fontSize: '0.9rem'
+                }}>
+                  ✓ Your Membership Tier
+                </div>
+              )}
             </div>
 
             <div 
-              className={`pricing-card featured ${selectedPlan === 'family' ? 'selected' : ''}`}
-              onClick={() => setSelectedPlan('family')}
+              className={`pricing-card ${selectedPlan === 'under40' ? 'selected' : ''}`}
+              style={{ cursor: 'default', opacity: selectedPlan === null ? 0.6 : 1 }}
             >
-              <div className="featured-badge">Most Popular</div>
-              <h3 className="pricing-tier">Family</h3>
+              <h3 className="pricing-tier">Under 40</h3>
               <div className="pricing-amount">
                 <span className="price">$200</span>
                 <span className="period">/year</span>
               </div>
               <ul className="pricing-features">
-                <li>✓ All Individual benefits</li>
-                <li>✓ Plus one guest at all events</li>
-                <li>✓ Priority event registration</li>
-                <li>✓ Special family programs</li>
-                <li>✓ Youth engagement opportunities</li>
+                <li>✓ Access to all speaker events</li>
+                <li>✓ Monthly newsletter</li>
+                <li>✓ Member directory access</li>
+                <li>✓ Voting rights</li>
+                <li>✓ Young professionals networking</li>
+                <li>✓ Career development programs</li>
               </ul>
+              {selectedPlan === 'under40' && (
+                <div style={{ 
+                  marginTop: '1rem', 
+                  padding: '0.5rem', 
+                  backgroundColor: '#4263EB', 
+                  color: 'white', 
+                  borderRadius: '4px',
+                  fontSize: '0.9rem'
+                }}>
+                  ✓ Your Membership Tier
+                </div>
+              )}
             </div>
 
             <div 
               className={`pricing-card ${selectedPlan === 'student' ? 'selected' : ''}`}
-              onClick={() => setSelectedPlan('student')}
+              style={{ cursor: 'default', opacity: selectedPlan === null ? 0.6 : 1 }}
             >
               <h3 className="pricing-tier">Student</h3>
               <div className="pricing-amount">
-                <span className="price">$25</span>
+                <span className="price">$75</span>
                 <span className="period">/year</span>
               </div>
               <ul className="pricing-features">
@@ -127,9 +216,45 @@ const MembershipPage = () => {
                 <li>✓ Monthly newsletter</li>
                 <li>✓ Student networking events</li>
                 <li>✓ Career development resources</li>
+                <li>✓ Mentorship opportunities</li>
+                <li>✓ Academic resources</li>
               </ul>
+              {selectedPlan === 'student' && (
+                <div style={{ 
+                  marginTop: '1rem', 
+                  padding: '0.5rem', 
+                  backgroundColor: '#4263EB', 
+                  color: 'white', 
+                  borderRadius: '4px',
+                  fontSize: '0.9rem'
+                }}>
+                  ✓ Your Membership Tier
+                </div>
+              )}
             </div>
           </div>
+
+          {/* Show selected tier info */}
+          {selectedPlan && (
+            <div style={{
+              textAlign: 'center',
+              marginTop: '1rem',
+              padding: '1rem',
+              backgroundColor: '#f8f9fa',
+              borderRadius: '8px',
+              maxWidth: '600px',
+              margin: '1rem auto'
+            }}>
+              <p style={{ color: '#4263EB', fontWeight: 'bold', marginBottom: '0.5rem' }}>
+                Based on your information:
+              </p>
+              <p style={{ color: '#666' }}>
+                {selectedPlan === 'student' && 'You qualify for Student Membership (.edu email detected)'}
+                {selectedPlan === 'over40' && `You qualify for Over 40 Membership (Age: ${age})`}
+                {selectedPlan === 'under40' && `You qualify for Under 40 Membership (Age: ${age})`}
+              </p>
+            </div>
+          )}
         </section>
 
         {/* Application Form Section */}
@@ -149,92 +274,13 @@ const MembershipPage = () => {
                 </div>
               )}
 
-              {/* Selected Plan Display */}
-              <div className="selected-plan-display">
-                <label>Selected Membership Plan</label>
-                <div className="selected-plan-info">
-                  <span className="plan-name">
-                    {selectedPlan === 'individual' && 'Individual Membership'}
-                    {selectedPlan === 'family' && 'Family Membership'}
-                    {selectedPlan === 'student' && 'Student Membership'}
-                  </span>
-                  <span className="plan-price">
-                    {selectedPlan === 'individual' && '$125/year'}
-                    {selectedPlan === 'family' && '$200/year'}
-                    {selectedPlan === 'student' && '$25/year'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Account Information */}
-              <div className="form-section">
-                <h3 style={{ marginBottom: '1rem', fontSize: '1.1rem', color: '#333' }}>Account Information</h3>
-                
-                <div className="form-group">
-                  <label htmlFor="username">Username</label>
-                  <input
-                    type="text"
-                    id="username"
-                    name="username"
-                    value={formData.username}
-                    onChange={handleInputChange}
-                    placeholder="Choose a username"
-                    required
-                    disabled={isLoading}
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="email">Email</label>
-                  <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    placeholder="your.email@example.com"
-                    required
-                    disabled={isLoading}
-                  />
-                </div>
-
-                <div className="form-row">
-                  <div className="form-group">
-                    <label htmlFor="password">Password</label>
-                    <input
-                      type="password"
-                      id="password"
-                      name="password"
-                      value={formData.password}
-                      onChange={handleInputChange}
-                      placeholder="••••••••••••"
-                      required
-                      disabled={isLoading}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="confirmPassword">Confirm Password</label>
-                    <input
-                      type="password"
-                      id="confirmPassword"
-                      name="confirmPassword"
-                      value={formData.confirmPassword}
-                      onChange={handleInputChange}
-                      placeholder="••••••••••••"
-                      required
-                      disabled={isLoading}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Personal Information */}
+              {/* Personal Information - Move this first to determine tier */}
               <div className="form-section">
                 <h3 style={{ marginBottom: '1rem', fontSize: '1.1rem', color: '#333' }}>Personal Information</h3>
                 
                 <div className="form-row">
                   <div className="form-group">
-                    <label htmlFor="firstName">First Name</label>
+                    <label htmlFor="firstName">First Name *</label>
                     <input
                       type="text"
                       id="firstName"
@@ -247,7 +293,7 @@ const MembershipPage = () => {
                     />
                   </div>
                   <div className="form-group">
-                    <label htmlFor="lastName">Last Name</label>
+                    <label htmlFor="lastName">Last Name *</label>
                     <input
                       type="text"
                       id="lastName"
@@ -263,7 +309,7 @@ const MembershipPage = () => {
 
                 <div className="form-row">
                   <div className="form-group">
-                    <label htmlFor="dateOfBirth">Date of Birth</label>
+                    <label htmlFor="dateOfBirth">Date of Birth *</label>
                     <input
                       type="date"
                       id="dateOfBirth"
@@ -271,8 +317,12 @@ const MembershipPage = () => {
                       value={formData.dateOfBirth}
                       onChange={handleInputChange}
                       max={new Date().toISOString().split('T')[0]}
+                      required
                       disabled={isLoading}
                     />
+                    <small style={{ color: '#666', fontSize: '0.8rem' }}>
+                      Used to determine membership tier
+                    </small>
                   </div>
                   <div className="form-group">
                     <label htmlFor="phone">Phone Number</label>
@@ -289,9 +339,99 @@ const MembershipPage = () => {
                 </div>
               </div>
 
-              <button type="submit" className="submit-btn" disabled={isLoading}>
-                {isLoading ? 'Creating Account...' : 'Create Account & Continue'}
+              {/* Account Information */}
+              <div className="form-section">
+                <h3 style={{ marginBottom: '1rem', fontSize: '1.1rem', color: '#333' }}>Account Information</h3>
+                
+                <div className="form-group">
+                  <label htmlFor="username">Username *</label>
+                  <input
+                    type="text"
+                    id="username"
+                    name="username"
+                    value={formData.username}
+                    onChange={handleInputChange}
+                    placeholder="Choose a username"
+                    required
+                    disabled={isLoading}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="email">Email *</label>
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    placeholder="your.email@example.com"
+                    required
+                    disabled={isLoading}
+                  />
+                  <small style={{ color: '#666', fontSize: '0.8rem' }}>
+                    Students: Use your .edu email to qualify for student membership
+                  </small>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="password">Password *</label>
+                    <input
+                      type="password"
+                      id="password"
+                      name="password"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      placeholder="••••••••••••"
+                      required
+                      disabled={isLoading}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="confirmPassword">Confirm Password *</label>
+                    <input
+                      type="password"
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      value={formData.confirmPassword}
+                      onChange={handleInputChange}
+                      placeholder="••••••••••••"
+                      required
+                      disabled={isLoading}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Selected Plan Display */}
+              {selectedPlan && (
+                <div className="selected-plan-display">
+                  <label>Your Membership Tier</label>
+                  <div className="selected-plan-info">
+                    <span className="plan-name">
+                      {selectedPlan === 'over40' && 'Over 40 Membership'}
+                      {selectedPlan === 'under40' && 'Under 40 Membership'}
+                      {selectedPlan === 'student' && 'Student Membership'}
+                    </span>
+                    <span className="plan-price">
+                      {selectedPlan === 'over40' && '$300/year'}
+                      {selectedPlan === 'under40' && '$200/year'}
+                      {selectedPlan === 'student' && '$75/year'}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <button type="submit" className="submit-btn" disabled={isLoading || !selectedPlan}>
+                {isLoading ? 'Creating Account...' : 'Create Account & Continue to Payment'}
               </button>
+
+              {!selectedPlan && formData.email && formData.dateOfBirth && (
+                <p style={{ color: '#666', fontSize: '0.9rem', textAlign: 'center', marginTop: '0.5rem' }}>
+                  Please complete all required fields to determine your membership tier
+                </p>
+              )}
             </form>
 
             <p className="form-footer">
