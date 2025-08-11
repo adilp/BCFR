@@ -131,4 +131,37 @@ public class ProfileController : ControllerBase
             return StatusCode(500, new { message = "An error occurred while updating the profile" });
         }
     }
+
+    [HttpGet("subscription")]
+    [Authorize]
+    public async Task<IActionResult> GetSubscription()
+    {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized();
+        }
+
+        var subscription = await _context.MembershipSubscriptions
+            .Where(s => s.UserId == userId && s.Status == "active")
+            .OrderByDescending(s => s.CreatedAt)
+            .FirstOrDefaultAsync();
+
+        if (subscription == null)
+        {
+            return NotFound(new { message = "No active subscription found" });
+        }
+
+        return Ok(new
+        {
+            id = subscription.StripeSubscriptionId,
+            status = subscription.Status,
+            membershipTier = subscription.MembershipTier,
+            amount = subscription.Amount,
+            startDate = subscription.StartDate,
+            endDate = subscription.EndDate,
+            nextBillingDate = subscription.NextBillingDate,
+            createdAt = subscription.CreatedAt
+        });
+    }
 }

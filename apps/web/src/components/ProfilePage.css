@@ -3,6 +3,7 @@
 .profile-page {
   min-height: 100vh;
   background-color: #fdf8f1;
+  padding-top: 80px; /* Account for fixed navbar height */
 }
 
 .profile-container {
