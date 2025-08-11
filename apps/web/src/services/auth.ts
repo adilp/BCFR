@@ -26,6 +26,7 @@ export interface AuthResponse {
   email: string;
   firstName: string;
   lastName: string;
+  role: string;
   expiresAt: string;
 }
 
@@ -35,6 +36,7 @@ export interface User {
   email: string;
   firstName: string;
   lastName: string;
+  role: string;
   dateOfBirth?: string;
 }
 
@@ -88,6 +90,19 @@ class AuthService {
     }
   }
 
+  getUserRole(): string | null {
+    const user = this.getStoredUser();
+    return user?.role || null;
+  }
+
+  isAdmin(): boolean {
+    return this.getUserRole() === 'Admin';
+  }
+
+  isMember(): boolean {
+    return this.getUserRole() === 'Member';
+  }
+
   private setAuthData(data: AuthResponse): void {
     localStorage.setItem('authToken', data.token);
     localStorage.setItem('authExpiresAt', data.expiresAt);
@@ -96,6 +111,7 @@ class AuthService {
       email: data.email,
       firstName: data.firstName,
       lastName: data.lastName,
+      role: data.role,
     }));
   }
 
