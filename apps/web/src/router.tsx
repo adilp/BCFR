@@ -6,6 +6,8 @@ import LoginPage from './components/LoginPage'
 import MembershipSuccess from './components/MembershipSuccess'
 import ProfilePage from './components/ProfilePage'
 import EventsPage from './components/EventsPage'
+import AdminDashboard from './components/AdminDashboard'
+import AdminProtectedRoute from './components/AdminProtectedRoute'
 
 // Create root route
 const rootRoute = createRootRoute({
@@ -61,8 +63,19 @@ const eventsRoute = createRoute({
   component: EventsPage
 })
 
+// Create admin dashboard route
+const adminRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/admin',
+  component: () => (
+    <AdminProtectedRoute>
+      <AdminDashboard />
+    </AdminProtectedRoute>
+  )
+})
+
 // Create the route tree
-const routeTree = rootRoute.addChildren([indexRoute, membershipRoute, membershipSuccessRoute, aboutRoute, loginRoute, profileRoute, eventsRoute])
+const routeTree = rootRoute.addChildren([indexRoute, membershipRoute, membershipSuccessRoute, aboutRoute, loginRoute, profileRoute, eventsRoute, adminRoute])
 
 // Create the router
 export const router = createRouter({ routeTree })
