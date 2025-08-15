@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import UserDetailsDrawer from './UserDetailsDrawer';
+import api from '../services/api';
 import { 
   MagnifyingGlassIcon,
   ChevronRightIcon,
@@ -32,8 +33,11 @@ interface User {
   stripeCustomerId?: string;
   nextBillingDate?: string;
   amount?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
+// Mock data removed - will fetch from API
 const mockUsers: User[] = [
   {
     id: '1',
@@ -150,12 +154,92 @@ const mockUsers: User[] = [
 ];
 
 function UserManagement() {
-  const [users] = useState<User[]>(mockUsers);
+  const [users, setUsers] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const pageSize = 20;
+
+  useEffect(() => {
+    fetchUsers();
+  }, [currentPage, filterRole, filterStatus]);
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Build query params
+      const params = new URLSearchParams();
+      params.append('page', currentPage.toString());
+      params.append('pageSize', pageSize.toString());
+      
+      if (filterRole !== 'all') {
+        params.append('role', filterRole);
+      }
+      
+      if (filterStatus !== 'all') {
+        params.append('isActive', filterStatus === 'active' ? 'true' : 'false');
+      }
+      
+      const response = await api.get(`/admin/users?${params.toString()}`);
+      
+      // Get pagination info from headers
+      const total = response.headers['x-total-count'];
+      if (total) {
+        setTotalCount(parseInt(total));
+      }
+      
+      // Map API response to User interface
+      const mappedUsers = response.data.map((u: any) => ({
+        id: u.id,
+        username: u.username,
+        email: u.email,
+        firstName: u.firstName,
+        lastName: u.lastName,
+        phone: u.phone,
+        role: u.role,
+        membershipTier: u.membershipTier,
+        subscriptionStatus: u.subscriptionStatus,
+        joinDate: u.createdAt,
+        lastLogin: u.updatedAt,
+        isActive: u.isActive,
+        address: u.address,
+        city: u.city,
+        state: u.state,
+        zipCode: u.zipCode,
+        country: u.country,
+        dateOfBirth: u.dateOfBirth,
+        stripeCustomerId: u.stripeCustomerId,
+        nextBillingDate: u.nextBillingDate,
+        amount: u.amount
+      }));
+      
+      setUsers(mappedUsers);
+    } catch (err: any) {
+      console.error('Failed to fetch users:', err);
+      setError(err.response?.data?.message || 'Failed to load users');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveUser = async (updatedUser: User) => {
+    try {
+      await api.put(`/admin/users/${updatedUser.id}`, updatedUser);
+      await fetchUsers(); // Refresh the list
+      setSelectedUser(null);
+    } catch (err: any) {
+      console.error('Failed to update user:', err);
+      alert(err.response?.data?.message || 'Failed to update user');
+    }
+  };
 
   const toggleRowExpansion = (userId: string) => {
     const newExpanded = new Set(expandedRows);
@@ -241,21 +325,41 @@ function UserManagement() {
       </div>
 
       <div className="spreadsheet-container">
-        <table className="spreadsheet-table">
-          <thead>
-            <tr>
-              <th></th>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Phone</th>
-              <th>Role</th>
-              <th>Membership</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredUsers.map((user) => (
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '2rem' }}>
+            <div>Loading users...</div>
+          </div>
+        ) : error ? (
+          <div style={{ textAlign: 'center', padding: '2rem', color: '#DC3545' }}>
+            <div>Error: {error}</div>
+            <button 
+              className="btn btn-primary" 
+              style={{ marginTop: '1rem' }}
+              onClick={() => fetchUsers()}
+            >
+              Retry
+            </button>
+          </div>
+        ) : filteredUsers.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '2rem', color: '#6C757D' }}>
+            No users found. Try adjusting your filters.
+          </div>
+        ) : (
+          <table className="spreadsheet-table">
+            <thead>
+              <tr>
+                <th></th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Role</th>
+                <th>Membership</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredUsers.map((user) => (
               <>
                 <tr key={user.id} className="user-row">
                   <td>
@@ -365,19 +469,44 @@ function UserManagement() {
                   </tr>
                 )}
               </>
-            ))}
-          </tbody>
-        </table>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
+
+      {totalCount > pageSize && (
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center',
+          gap: '1rem',
+          padding: '1rem',
+          borderTop: '1px solid #F0EBE5'
+        }}>
+          <button 
+            className="btn btn-secondary"
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+          >
+            Previous
+          </button>
+          <span>Page {currentPage} of {Math.ceil(totalCount / pageSize)}</span>
+          <button 
+            className="btn btn-secondary"
+            onClick={() => setCurrentPage(p => p + 1)}
+            disabled={currentPage >= Math.ceil(totalCount / pageSize)}
+          >
+            Next
+          </button>
+        </div>
+      )}
 
       {selectedUser && (
         <UserDetailsDrawer
           user={selectedUser}
           onClose={() => setSelectedUser(null)}
-          onSave={(updatedUser) => {
-            console.log('Saving user:', updatedUser);
-            setSelectedUser(null);
-          }}
+          onSave={handleSaveUser}
         />
       )}
     </div>
