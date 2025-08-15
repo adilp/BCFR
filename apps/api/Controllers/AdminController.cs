@@ -49,17 +49,7 @@ public class AdminController : ControllerBase
                 .OrderBy(u => u.CreatedAt)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
-                .ToListAsync();
-            
-            // Get subscription data for each user
-            var userIds = users.Select(u => u.Id).ToList();
-            var subscriptions = await _context.MembershipSubscriptions
-                .Where(s => userIds.Contains(s.UserId))
-                .ToDictionaryAsync(s => s.UserId);
-            
-            var response = users.Select(u => {
-                var sub = subscriptions.ContainsKey(u.Id) ? subscriptions[u.Id] : null;
-                return new UserAdminResponse
+                .Select(u => new UserAdminResponse
                 {
                     Id = u.Id,
                     Username = u.Username,
@@ -76,20 +66,15 @@ public class AdminController : ControllerBase
                     ZipCode = u.ZipCode,
                     Country = u.Country,
                     CreatedAt = u.CreatedAt,
-                    UpdatedAt = u.UpdatedAt,
-                    MembershipTier = sub?.MembershipTier,
-                    SubscriptionStatus = sub?.Status,
-                    StripeCustomerId = sub?.StripeCustomerId,
-                    NextBillingDate = sub?.NextBillingDate,
-                    Amount = sub?.Amount
-                };
-            }).ToList();
+                    UpdatedAt = u.UpdatedAt
+                })
+                .ToListAsync();
 
-            Response.Headers.Add("X-Total-Count", totalCount.ToString());
-            Response.Headers.Add("X-Page", page.ToString());
-            Response.Headers.Add("X-Page-Size", pageSize.ToString());
+            Response.Headers.Append("X-Total-Count", totalCount.ToString());
+            Response.Headers.Append("X-Page", page.ToString());
+            Response.Headers.Append("X-Page-Size", pageSize.ToString());
 
-            return Ok(response);
+            return Ok(users);
         }
         catch (Exception ex)
         {

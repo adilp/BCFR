@@ -62,11 +62,4 @@ public class UserAdminResponse
     public string? Country { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
-    
-    // Subscription info
-    public string? MembershipTier { get; set; }
-    public string? SubscriptionStatus { get; set; }
-    public string? StripeCustomerId { get; set; }
-    public DateTime? NextBillingDate { get; set; }
-    public decimal? Amount { get; set; }
 }
