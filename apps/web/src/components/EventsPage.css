@@ -167,8 +167,9 @@
 }
 
 .btn-secondary:hover {
-  background: var(--primary-color);
-  color: white;
+  background: #F5F2ED;
+  color: #4263EB;
+  border-color: #4263EB;
 }
 
 /* Subscription banner */

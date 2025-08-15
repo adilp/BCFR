@@ -305,6 +305,46 @@
   gap: 0.75rem;
 }
 
+/* Base button styles */
+.btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none;
+}
+
+.btn:focus {
+  outline: 2px solid #4263EB;
+  outline-offset: 2px;
+}
+
+.btn-primary {
+  background-color: #4263EB;
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #364FC7; /* Darker blue for better contrast */
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+}
+
+.btn-secondary {
+  background-color: #F5F2ED;
+  color: #212529;
+  border: 1px solid #E8E0D6;
+}
+
+.btn-secondary:hover {
+  background-color: #E8E0D6; /* Slightly darker for better contrast */
+  border-color: #DDD4C7;
+  color: #212529; /* Ensure text stays dark */
+}
+
 .btn-danger {
   background-color: #FA5252;
   color: white;

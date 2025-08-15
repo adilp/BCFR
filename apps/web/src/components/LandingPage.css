@@ -116,7 +116,7 @@ body {
 }
 
 .btn-primary:hover {
-  background: var(--primary-blue-light);
+  background: #364FC7; /* Darker blue for better contrast */
   transform: translateY(-2px);
   box-shadow: var(--shadow-lg);
 }
@@ -136,8 +136,9 @@ body {
 }
 
 .btn-secondary:hover {
-  background: var(--primary-blue);
-  color: white;
+  background: var(--bg-gray);
+  color: var(--primary-blue);
+  border-color: var(--primary-blue);
   transform: translateY(-2px);
   box-shadow: var(--shadow-lg);
 }

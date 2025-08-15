@@ -177,7 +177,7 @@
 }
 
 .btn-primary:hover {
-  background-color: #5C7CFA;
+  background-color: #364FC7; /* Darker blue for better contrast */
   transform: translateY(-1px);
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
 }
@@ -189,8 +189,9 @@
 }
 
 .btn-secondary:hover {
-  background-color: #fdf8f1;
+  background-color: #E8E0D6; /* Slightly darker for better contrast */
   border-color: #DDD4C7;
+  color: #212529; /* Ensure text stays dark */
 }
 
 .btn-ghost {
