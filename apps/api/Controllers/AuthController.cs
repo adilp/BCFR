@@ -8,6 +8,7 @@ using MemberOrgApi.Data;
 using MemberOrgApi.DTOs;
 using MemberOrgApi.Models;
 using MemberOrgApi.Services;
+using MemberOrgApi.Constants;
 using Microsoft.AspNetCore.Authorization;
 
 namespace MemberOrgApi.Controllers;
@@ -20,13 +21,20 @@ public class AuthController : ControllerBase
     private readonly IConfiguration _configuration;
     private readonly ILogger<AuthController> _logger;
     private readonly IEmailService _emailService;
+    private readonly IActivityLogService _activityLogService;
 
-    public AuthController(AppDbContext context, IConfiguration configuration, ILogger<AuthController> logger, IEmailService emailService)
+    public AuthController(
+        AppDbContext context, 
+        IConfiguration configuration, 
+        ILogger<AuthController> logger, 
+        IEmailService emailService,
+        IActivityLogService activityLogService)
     {
         _context = context;
         _configuration = configuration;
         _logger = logger;
         _emailService = emailService;
+        _activityLogService = activityLogService;
     }
 
     [HttpPost("register")]
@@ -82,6 +90,18 @@ public class AuthController : ControllerBase
             _context.Sessions.Add(session);
             await _context.SaveChangesAsync();
 
+            // Log registration activity
+            await _activityLogService.LogActivityAsync(
+                user.Id,
+                ActivityTypes.Registration,
+                ActivityCategories.Authentication,
+                "New user registration",
+                metadata: new Dictionary<string, object> 
+                { 
+                    { "Email", user.Email },
+                    { "Username", user.Username }
+                });
+
             // Send welcome email asynchronously
             _ = Task.Run(async () =>
             {
@@ -124,6 +144,15 @@ public class AuthController : ControllerBase
             
             if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
             {
+                // Log failed login attempt if user exists
+                if (user != null)
+                {
+                    await _activityLogService.LogLoginAsync(
+                        user.Id, 
+                        HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown",
+                        Request.Headers["User-Agent"].ToString(),
+                        success: false);
+                }
                 return Unauthorized(new { message = "Invalid username or password" });
             }
 
@@ -147,6 +176,13 @@ public class AuthController : ControllerBase
 
             _context.Sessions.Add(session);
             await _context.SaveChangesAsync();
+
+            // Log successful login
+            await _activityLogService.LogLoginAsync(
+                user.Id,
+                session.IpAddress ?? "Unknown",
+                session.UserAgent ?? "Unknown",
+                success: true);
 
             return Ok(new LoginResponse
             {

@@ -113,6 +113,10 @@ builder.Services.AddScoped<IStripeService, StripeService>();
 // Configure Email Service
 builder.Services.AddScoped<IEmailService, EmailService>();
 
+// Register activity log service
+builder.Services.AddScoped<IActivityLogService, ActivityLogService>();
+builder.Services.AddHttpContextAccessor();
+
 var app = builder.Build();
 
 // Add /api prefix for local development to match frontend expectations

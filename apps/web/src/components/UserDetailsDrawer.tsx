@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import ActivityTimeline from './ActivityTimeline';
 import './UserDetailsDrawer.css';
 
 interface User {
@@ -313,37 +314,7 @@ function UserDetailsDrawer({ user, onClose, onSave }: UserDetailsDrawerProps) {
 
           {activeTab === 'activity' && (
             <div className="tab-content">
-              <div className="activity-timeline">
-                <div className="timeline-item">
-                  <div className="timeline-marker"></div>
-                  <div className="timeline-content">
-                    <div className="timeline-header">
-                      <strong>Last Login</strong>
-                      <span className="timeline-date">{editedUser.lastLogin || 'Never'}</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="timeline-item">
-                  <div className="timeline-marker"></div>
-                  <div className="timeline-content">
-                    <div className="timeline-header">
-                      <strong>Account Created</strong>
-                      <span className="timeline-date">{editedUser.joinDate}</span>
-                    </div>
-                  </div>
-                </div>
-                {editedUser.subscriptionStatus && (
-                  <div className="timeline-item">
-                    <div className="timeline-marker"></div>
-                    <div className="timeline-content">
-                      <div className="timeline-header">
-                        <strong>Subscription Status Changed</strong>
-                        <span className="timeline-date">Current: {editedUser.subscriptionStatus}</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
+              <ActivityTimeline userId={editedUser.id} showFilters={true} limit={50} />
 
               <div className="form-section">
                 <h4 className="section-title">Account Actions</h4>
