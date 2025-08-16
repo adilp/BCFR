@@ -258,27 +258,6 @@ const EventsList = ({ events: propEvents, showHeader = true, showDetails = false
                     </div>
                   )}
                   
-                  {event.rsvpStats && (
-                    <div className="detail-item">
-                      <UserGroupIcon className="detail-icon" />
-                      <span className="detail-label">RSVPs:</span>
-                      <div className="rsvp-stats">
-                        <span className="rsvp-stat">
-                          <CheckCircleIcon className="rsvp-icon yes" />
-                          {event.rsvpStats.yes} Yes
-                        </span>
-                        <span className="rsvp-stat">
-                          <XCircleIcon className="rsvp-icon no" />
-                          {event.rsvpStats.no} No
-                        </span>
-                        <span className="rsvp-stat">
-                          <QuestionMarkCircleIcon className="rsvp-icon pending" />
-                          {event.rsvpStats.pending} Pending
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                  
                   <div className="event-actions">
                     <div className="rsvp-buttons">
                       <button 
