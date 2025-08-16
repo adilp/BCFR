@@ -153,7 +153,7 @@ const EventsList = ({ events: propEvents, showHeader = true, showDetails = false
     }
 
     try {
-      const response = await api.post(`/events/${eventId}/rsvp`, {
+      await api.post(`/events/${eventId}/rsvp`, {
         response: status,
         hasPlusOne: userRsvps[eventId]?.plusOne || false
       })

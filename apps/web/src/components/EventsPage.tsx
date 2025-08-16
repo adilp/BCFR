@@ -12,28 +12,48 @@ const EventsPage = () => {
   const [loading, setLoading] = useState(true)
   const pastEvents = [
     {
+      id: 'past-1',
       day: '10',
       month: 'JAN',
       title: 'Middle East Peace Process: New Perspectives',
       description: 'Former Secretary of State discusses recent developments in regional diplomacy',
+      eventDate: '2025-01-10',
+      eventTime: '12:00',
+      endTime: '13:30',
       time: '12:00 PM - 1:30 PM',
       location: 'The Club Birmingham, Downtown',
       speaker: 'Sec. John Kerry, Former US Secretary of State',
-      zoomLink: 'https://zoom.us/j/archived123',
-      attendeeLimit: 200,
-      currentAttendees: 195
+      rsvpDeadline: '2025-01-07',
+      allowPlusOne: true,
+      status: 'published',
+      rsvpStats: {
+        yes: 195,
+        no: 5,
+        pending: 0,
+        plusOnes: 30
+      }
     },
     {
+      id: 'past-2',
       day: '05',
       month: 'JAN',
       title: 'China-US Relations in the New Decade',
       description: 'Expert panel on economic and strategic competition',
+      eventDate: '2025-01-05',
+      eventTime: '18:00',
+      endTime: '20:00',
       time: '6:00 PM - 8:00 PM',
       location: 'Birmingham Museum of Art',
       speaker: 'Panel: Dr. Susan Rice, Prof. Graham Allison, Amb. Jon Huntsman',
-      zoomLink: 'https://zoom.us/j/archived456',
-      attendeeLimit: 250,
-      currentAttendees: 240
+      rsvpDeadline: '2025-01-02',
+      allowPlusOne: true,
+      status: 'published',
+      rsvpStats: {
+        yes: 240,
+        no: 10,
+        pending: 0,
+        plusOnes: 45
+      }
     }
   ]
 
