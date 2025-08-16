@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using MemberOrgApi.Data;
 using MemberOrgApi.Models;
 using MemberOrgApi.Services;
+using MemberOrgApi.Constants;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,11 +19,13 @@ public class EventsController : ControllerBase
 {
     private readonly AppDbContext _context;
     private readonly ILogger<EventsController> _logger;
+    private readonly IActivityLogService _activityLogService;
 
-    public EventsController(AppDbContext context, ILogger<EventsController> logger)
+    public EventsController(AppDbContext context, ILogger<EventsController> logger, IActivityLogService activityLogService)
     {
         _context = context;
         _logger = logger;
+        _activityLogService = activityLogService;
     }
 
     // GET: /events - Get all published events (public)
@@ -337,8 +340,14 @@ public class EventsController : ControllerBase
             .Include(r => r.User)
             .FirstOrDefaultAsync(r => r.EventId == id && r.UserId == userGuid);
 
+        string previousResponse = null;
+        bool isNewRsvp = false;
+        
         if (existingRsvp != null)
         {
+            // Store previous response for logging
+            previousResponse = existingRsvp.Response;
+            
             // Update existing RSVP
             existingRsvp.Response = createDto.Response;
             existingRsvp.HasPlusOne = createDto.Response == "yes" ? createDto.HasPlusOne : false;
@@ -348,6 +357,7 @@ public class EventsController : ControllerBase
         else
         {
             // Create new RSVP
+            isNewRsvp = true;
             existingRsvp = new EventRsvp
             {
                 EventId = id,
@@ -367,6 +377,39 @@ public class EventsController : ControllerBase
         }
 
         await _context.SaveChangesAsync();
+        
+        // Log the activity
+        var activityType = createDto.Response == "yes" 
+            ? ActivityTypes.EventRegistration 
+            : ActivityTypes.EventCancellation;
+        
+        var description = isNewRsvp
+            ? $"RSVP'd '{createDto.Response}' to event: {evt.Title}"
+            : $"Changed RSVP from '{previousResponse}' to '{createDto.Response}' for event: {evt.Title}";
+            
+        var metadata = new Dictionary<string, object>
+        {
+            { "EventId", evt.Id },
+            { "EventTitle", evt.Title },
+            { "EventDate", evt.EventDate },
+            { "Response", createDto.Response },
+            { "HasPlusOne", createDto.HasPlusOne }
+        };
+        
+        if (!isNewRsvp && previousResponse != null)
+        {
+            metadata.Add("PreviousResponse", previousResponse);
+        }
+        
+        await _activityLogService.LogActivityAsync(
+            userGuid,
+            activityType,
+            ActivityCategories.Engagement,
+            description,
+            oldValue: isNewRsvp ? null : previousResponse,
+            newValue: createDto.Response,
+            metadata: metadata
+        );
 
         var dto = new EventRsvpDto
         {
@@ -408,6 +451,23 @@ public class EventsController : ControllerBase
         rsvp.CheckedIn = true;
         rsvp.CheckInTime = DateTime.UtcNow;
         await _context.SaveChangesAsync();
+
+        // Get event details for logging
+        var evt = await _context.Events.FindAsync(id);
+        
+        // Log the check-in activity
+        await _activityLogService.LogActivityAsync(
+            userId,
+            ActivityTypes.EventAttendance,
+            ActivityCategories.Engagement,
+            $"Checked in to event: {evt?.Title}",
+            metadata: new Dictionary<string, object>
+            {
+                { "EventId", id },
+                { "EventTitle", evt?.Title ?? "Unknown" },
+                { "CheckInTime", DateTime.UtcNow }
+            }
+        );
 
         _logger.LogInformation("Attendee checked in: EventId={EventId}, UserId={UserId}", id, userId);
 

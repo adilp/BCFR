@@ -36,6 +36,7 @@ interface EventsListProps {
   events?: Event[]
   showHeader?: boolean
   showDetails?: boolean
+  isPast?: boolean
 }
 
 const defaultEvents: Event[] = [
@@ -113,7 +114,7 @@ const defaultEvents: Event[] = [
   }
 ]
 
-const EventsList = ({ events: propEvents, showHeader = true, showDetails = false }: EventsListProps) => {
+const EventsList = ({ events: propEvents, showHeader = true, showDetails = false, isPast = false }: EventsListProps) => {
   const { isAuthenticated } = useAuth()
   const [events, setEvents] = useState<Event[]>(propEvents || [])
   const [loading, setLoading] = useState(!propEvents)
@@ -130,17 +131,39 @@ const EventsList = ({ events: propEvents, showHeader = true, showDetails = false
   const fetchEvents = async () => {
     try {
       setLoading(true)
-      const response = await api.get('/events?status=published')
-      const formattedEvents = response.data.map((event: any) => ({
-        ...event,
-        day: new Date(event.eventDate).getDate().toString(),
-        month: new Date(event.eventDate).toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
-        time: `${event.eventTime} - ${event.endTime}`
-      }))
-      setEvents(formattedEvents)
+      if (isPast) {
+        // Fetch past events
+        const response = await api.get('/events')
+        const now = new Date()
+        const pastEvents = response.data
+          .filter((event: any) => new Date(event.eventDate) < now)
+          .sort((a: any, b: any) => new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime())
+          .slice(0, 2)
+          .map((event: any) => ({
+            ...event,
+            day: new Date(event.eventDate).getDate().toString(),
+            month: new Date(event.eventDate).toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
+            time: `${event.eventTime} - ${event.endTime}`
+          }))
+        setEvents(pastEvents)
+      } else {
+        // Fetch upcoming events
+        const response = await api.get('/events?status=published')
+        const formattedEvents = response.data.map((event: any) => ({
+          ...event,
+          day: new Date(event.eventDate).getDate().toString(),
+          month: new Date(event.eventDate).toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
+          time: `${event.eventTime} - ${event.endTime}`
+        }))
+        setEvents(formattedEvents)
+      }
     } catch (error) {
       console.error('Failed to fetch events:', error)
-      setEvents(defaultEvents) // Fallback to default events
+      if (!isPast) {
+        setEvents(defaultEvents) // Fallback to default events only for upcoming
+      } else {
+        setEvents([])
+      }
     } finally {
       setLoading(false)
     }
@@ -258,37 +281,39 @@ const EventsList = ({ events: propEvents, showHeader = true, showDetails = false
                     </div>
                   )}
                   
-                  <div className="event-actions">
-                    <div className="rsvp-buttons">
-                      <button 
-                        className={`btn-rsvp ${(userRsvps[event.id]?.status || event.userRsvpStatus) === 'yes' ? 'active yes' : ''}`}
-                        onClick={() => handleRsvp(event.id, 'yes')}
-                      >
-                        <CheckCircleIcon className="btn-icon" />
-                        Yes
-                      </button>
-                      <button 
-                        className={`btn-rsvp ${(userRsvps[event.id]?.status || event.userRsvpStatus) === 'no' ? 'active no' : ''}`}
-                        onClick={() => handleRsvp(event.id, 'no')}
-                      >
-                        <XCircleIcon className="btn-icon" />
-                        No
-                      </button>
-                    </div>
-                    
-                    {((userRsvps[event.id]?.status || event.userRsvpStatus) === 'yes' && event.allowPlusOne) && (
-                      <div className="plus-one-option">
-                        <label className="plus-one-label">
-                          <input 
-                            type="checkbox" 
-                            checked={userRsvps[event.id]?.plusOne || event.hasPlusOne || false}
-                            onChange={(e) => handlePlusOne(event.id, e.target.checked)}
-                          />
-                          <span>Bringing a plus one?</span>
-                        </label>
+                  {!isPast && (
+                    <div className="event-actions">
+                      <div className="rsvp-buttons">
+                        <button 
+                          className={`btn-rsvp ${(userRsvps[event.id]?.status || event.userRsvpStatus) === 'yes' ? 'active yes' : ''}`}
+                          onClick={() => handleRsvp(event.id, 'yes')}
+                        >
+                          <CheckCircleIcon className="btn-icon" />
+                          Yes
+                        </button>
+                        <button 
+                          className={`btn-rsvp ${(userRsvps[event.id]?.status || event.userRsvpStatus) === 'no' ? 'active no' : ''}`}
+                          onClick={() => handleRsvp(event.id, 'no')}
+                        >
+                          <XCircleIcon className="btn-icon" />
+                          No
+                        </button>
                       </div>
-                    )}
-                  </div>
+                      
+                      {((userRsvps[event.id]?.status || event.userRsvpStatus) === 'yes' && event.allowPlusOne) && (
+                        <div className="plus-one-option">
+                          <label className="plus-one-label">
+                            <input 
+                              type="checkbox" 
+                              checked={userRsvps[event.id]?.plusOne || event.hasPlusOne || false}
+                              onChange={(e) => handlePlusOne(event.id, e.target.checked)}
+                            />
+                            <span>Bringing a plus one?</span>
+                          </label>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

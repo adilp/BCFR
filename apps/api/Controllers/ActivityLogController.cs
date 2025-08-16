@@ -27,10 +27,25 @@ public class ActivityLogController : ControllerBase
     public async Task<ActionResult<IEnumerable<ActivityLog>>> GetUserActivities(
         Guid userId,
         [FromQuery] int skip = 0,
-        [FromQuery] int take = 50)
+        [FromQuery] int take = 50,
+        [FromQuery] string? activityCategory = null)
     {
         try
         {
+            // If category filter is specified, use search method instead
+            if (!string.IsNullOrEmpty(activityCategory))
+            {
+                var filteredActivities = await _activityLogService.SearchActivitiesAsync(
+                    activityType: null,
+                    activityCategory: activityCategory,
+                    userId: userId,
+                    startDate: null,
+                    endDate: null,
+                    skip: skip,
+                    take: take);
+                return Ok(filteredActivities);
+            }
+            
             var activities = await _activityLogService.GetUserActivitiesAsync(userId, skip, take);
             return Ok(activities);
         }
@@ -44,7 +59,8 @@ public class ActivityLogController : ControllerBase
     [HttpGet("my-activities")]
     public async Task<ActionResult<IEnumerable<ActivityLog>>> GetMyActivities(
         [FromQuery] int skip = 0,
-        [FromQuery] int take = 50)
+        [FromQuery] int take = 50,
+        [FromQuery] string? activityCategory = null)
     {
         try
         {
@@ -52,6 +68,20 @@ public class ActivityLogController : ControllerBase
             if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
             {
                 return Unauthorized(new { message = "Invalid user token" });
+            }
+
+            // If category filter is specified, use search method instead
+            if (!string.IsNullOrEmpty(activityCategory))
+            {
+                var filteredActivities = await _activityLogService.SearchActivitiesAsync(
+                    activityType: null,
+                    activityCategory: activityCategory,
+                    userId: userId,
+                    startDate: null,
+                    endDate: null,
+                    skip: skip,
+                    take: take);
+                return Ok(filteredActivities);
             }
 
             var activities = await _activityLogService.GetUserActivitiesAsync(userId, skip, take);

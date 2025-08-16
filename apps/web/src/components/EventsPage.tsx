@@ -10,52 +10,6 @@ const EventsPage = () => {
   const { isAuthenticated, user } = useAuth()
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false)
   const [loading, setLoading] = useState(true)
-  const pastEvents = [
-    {
-      id: 'past-1',
-      day: '10',
-      month: 'JAN',
-      title: 'Middle East Peace Process: New Perspectives',
-      description: 'Former Secretary of State discusses recent developments in regional diplomacy',
-      eventDate: '2025-01-10',
-      eventTime: '12:00',
-      endTime: '13:30',
-      time: '12:00 PM - 1:30 PM',
-      location: 'The Club Birmingham, Downtown',
-      speaker: 'Sec. John Kerry, Former US Secretary of State',
-      rsvpDeadline: '2025-01-07',
-      allowPlusOne: true,
-      status: 'published',
-      rsvpStats: {
-        yes: 195,
-        no: 5,
-        pending: 0,
-        plusOnes: 30
-      }
-    },
-    {
-      id: 'past-2',
-      day: '05',
-      month: 'JAN',
-      title: 'China-US Relations in the New Decade',
-      description: 'Expert panel on economic and strategic competition',
-      eventDate: '2025-01-05',
-      eventTime: '18:00',
-      endTime: '20:00',
-      time: '6:00 PM - 8:00 PM',
-      location: 'Birmingham Museum of Art',
-      speaker: 'Panel: Dr. Susan Rice, Prof. Graham Allison, Amb. Jon Huntsman',
-      rsvpDeadline: '2025-01-02',
-      allowPlusOne: true,
-      status: 'published',
-      rsvpStats: {
-        yes: 240,
-        no: 10,
-        pending: 0,
-        plusOnes: 45
-      }
-    }
-  ]
 
   useEffect(() => {
     checkSubscriptionStatus()
@@ -189,28 +143,11 @@ const EventsPage = () => {
             <h2 className="events-section-title">Upcoming Events</h2>
             <EventsList showHeader={false} showDetails={showDetailedView} />
             
-            <div className="events-info-cards">
-              <div className="info-card">
-                <CalendarIcon className="info-icon" />
-                <h3>Monthly Speaker Series</h3>
-                <p>Join us every third Thursday for our signature speaker series featuring global leaders and experts</p>
-              </div>
-              <div className="info-card">
-                <ClockIcon className="info-icon" />
-                <h3>Luncheon Programs</h3>
-                <p>12:00 PM - 1:30 PM at The Club Birmingham. Lunch included with your membership</p>
-              </div>
-              <div className="info-card">
-                <MapPinIcon className="info-icon" />
-                <h3>Location & Parking</h3>
-                <p>All events held at premier venues in Birmingham with convenient parking available</p>
-              </div>
-            </div>
           </section>
 
           <section className="events-section">
             <h2 className="events-section-title">Past Events</h2>
-            <EventsList events={pastEvents} showHeader={false} showDetails={showDetailedView} />
+            <EventsList showHeader={false} showDetails={showDetailedView} isPast={true} />
           </section>
         </div>
       </div>
