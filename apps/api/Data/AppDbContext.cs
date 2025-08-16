@@ -14,6 +14,8 @@ public class AppDbContext : DbContext
     public DbSet<Session> Sessions { get; set; }
     public DbSet<MembershipSubscription> MembershipSubscriptions { get; set; }
     public DbSet<ActivityLog> ActivityLogs { get; set; }
+    public DbSet<Event> Events { get; set; }
+    public DbSet<EventRsvp> EventRsvps { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -98,6 +100,53 @@ public class AppDbContext : DbContext
             entity.HasIndex(e => e.CreatedAt);
             entity.HasIndex(e => e.ActivityType);
             entity.HasIndex(e => e.ActivityCategory);
+        });
+
+        // Configure Event entity
+        modelBuilder.Entity<Event>(entity =>
+        {
+            entity.ToTable("Events");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Title).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.Description).IsRequired();
+            entity.Property(e => e.Location).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.Speaker).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.SpeakerTitle).HasMaxLength(255);
+            entity.Property(e => e.Status).IsRequired().HasMaxLength(20)
+                .HasDefaultValue("draft");
+            
+            entity.HasOne(e => e.CreatedBy)
+                .WithMany()
+                .HasForeignKey(e => e.CreatedById)
+                .OnDelete(DeleteBehavior.SetNull);
+            
+            entity.HasIndex(e => e.EventDate);
+            entity.HasIndex(e => e.Status);
+            entity.HasIndex(e => e.RsvpDeadline);
+        });
+
+        // Configure EventRsvp entity
+        modelBuilder.Entity<EventRsvp>(entity =>
+        {
+            entity.ToTable("EventRsvps");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Response).IsRequired().HasMaxLength(20)
+                .HasDefaultValue("pending");
+            
+            entity.HasOne(e => e.Event)
+                .WithMany(e => e.Rsvps)
+                .HasForeignKey(e => e.EventId)
+                .OnDelete(DeleteBehavior.Cascade);
+            
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            
+            // Ensure one RSVP per user per event
+            entity.HasIndex(e => new { e.EventId, e.UserId }).IsUnique();
+            entity.HasIndex(e => e.Response);
+            entity.HasIndex(e => e.ResponseDate);
         });
     }
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Navigation from './Navigation';
 import UserManagement from './UserManagement';
+import EventManagement from './EventManagement';
 import EmailComposer from './admin/EmailComposer';
 import { 
   ArrowTrendingUpIcon,
@@ -31,7 +32,7 @@ function AdminDashboard() {
           </div>
         );
       case 'events':
-        return <div className="placeholder-content">Events Management - Coming Soon</div>;
+        return <EventManagement />;
       case 'finances':
         return <div className="placeholder-content">Financial Overview - Coming Soon</div>;
       case 'reports':

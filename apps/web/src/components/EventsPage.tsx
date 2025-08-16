@@ -182,8 +182,8 @@ const EventsPage = () => {
               </div>
               <div className="info-card">
                 <MapPinIcon className="info-icon" />
-                <h3>Virtual Options</h3>
-                <p>Can't attend in person? All events are livestreamed for members worldwide</p>
+                <h3>Location & Parking</h3>
+                <p>All events held at premier venues in Birmingham with convenient parking available</p>
               </div>
             </div>
           </section>
