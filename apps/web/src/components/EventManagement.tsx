@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import EventDetailsDrawer from './EventDetailsDrawer';
 import api from '../services/api';
+import { formatDateForDisplay } from '@memberorg/shared';
 import { 
   MagnifyingGlassIcon,
   ChevronRightIcon,
@@ -212,11 +213,7 @@ function EventManagement() {
   };
 
   const formatEventDate = (date: string) => {
-    return new Date(date).toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric',
-      year: 'numeric'
-    });
+    return formatDateForDisplay(date, { format: 'short' });
   };
 
   return (

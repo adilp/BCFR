@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
+import { formatForDateInput, parseFromDateInput, addDays } from '@memberorg/shared';
 import './EventDetailsDrawer.css';
 
 interface Event {
@@ -31,23 +32,21 @@ function EventDetailsDrawer({ event, isNew = false, onClose, onSave }: EventDeta
   const getInitialFormData = () => {
     if (isNew) {
       const today = new Date();
-      const nextWeek = new Date(today);
-      nextWeek.setDate(today.getDate() + 7);
-      const rsvpDeadline = new Date(nextWeek);
-      rsvpDeadline.setDate(nextWeek.getDate() - 3);
+      const nextWeek = addDays(today, 7);
+      const rsvpDeadline = addDays(nextWeek, -3);
       
       return {
         id: '',
         title: '',
         description: '',
-        eventDate: nextWeek.toISOString().split('T')[0],
+        eventDate: formatForDateInput(nextWeek),
         eventTime: '12:00',
         endTime: '13:30',
         location: 'The Club Birmingham, Downtown',
         speaker: '',
         speakerTitle: '',
         speakerBio: '',
-        rsvpDeadline: rsvpDeadline.toISOString().split('T')[0],
+        rsvpDeadline: formatForDateInput(rsvpDeadline),
         maxAttendees: undefined,
         allowPlusOne: true,
         status: 'draft' as const

@@ -5,6 +5,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using MemberOrgApi.Models;
 using MemberOrgApi.Services;
+using MemberOrgApi.Converters;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,7 +15,14 @@ if (builder.Environment.IsProduction())
     builder.Configuration.AddEnvironmentVariables();
 }
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // Add custom JSON converters for date handling
+        options.JsonSerializerOptions.Converters.Add(new CentralTimeJsonConverter());
+        options.JsonSerializerOptions.Converters.Add(new DateOnlyJsonConverter());
+        options.JsonSerializerOptions.Converters.Add(new NullableDateOnlyJsonConverter());
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 

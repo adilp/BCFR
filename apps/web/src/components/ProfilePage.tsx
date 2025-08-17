@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext'
 import Navigation from './Navigation'
 import './ProfilePage.css'
 import { apiClient } from '../services/api'
+import { formatDateForDisplay } from '@memberorg/shared'
 
 interface SubscriptionData {
   id: string
@@ -178,11 +179,7 @@ const ProfilePage = () => {
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    })
+    return formatDateForDisplay(dateString, { format: 'long' })
   }
 
   const formatCurrency = (amount: number) => {

@@ -3,6 +3,7 @@ import { MapPinIcon, ClockIcon, UserGroupIcon, CalendarIcon, CheckCircleIcon, XC
 import { useState, useEffect } from 'react'
 import api from '../services/api'
 import { useAuth } from '../contexts/AuthContext'
+import { formatDateForDisplay, parseDateFromApi, isDateInPast } from '@memberorg/shared'
 
 interface Event {
   id: string

@@ -3,6 +3,7 @@ import './MembershipPage.css'
 import Navigation from './Navigation'
 import { useAuth } from '../contexts/AuthContext'
 import CheckoutForm from './CheckoutForm'
+import { calculateAge, formatForDateInput } from '@memberorg/shared'
 
 const MembershipPage = () => {
   const { register } = useAuth()
@@ -29,16 +30,9 @@ const MembershipPage = () => {
   const [isRegistered, setIsRegistered] = useState(false)
   const [newRestriction, setNewRestriction] = useState('')
 
-  // Calculate age from date of birth
-  const calculateAge = (dob: string): number => {
-    const birthDate = new Date(dob)
-    const today = new Date()
-    let age = today.getFullYear() - birthDate.getFullYear()
-    const monthDiff = today.getMonth() - birthDate.getMonth()
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--
-    }
-    return age
+  // Calculate age from date of birth using shared utility
+  const getAge = (dob: string): number => {
+    return calculateAge(dob) || 0
   }
 
   // Auto-select membership tier based on DOB and email
@@ -49,7 +43,7 @@ const MembershipPage = () => {
     if (isStudent) {
       setSelectedPlan('student')
     } else if (formData.dateOfBirth) {
-      const userAge = calculateAge(formData.dateOfBirth)
+      const userAge = getAge(formData.dateOfBirth)
       setAge(userAge)
       if (userAge >= 40) {
         setSelectedPlan('over40')
@@ -354,7 +348,7 @@ const MembershipPage = () => {
                       name="dateOfBirth"
                       value={formData.dateOfBirth}
                       onChange={handleInputChange}
-                      max={new Date().toISOString().split('T')[0]}
+                      max={formatForDateInput(new Date())}
                       required
                       disabled={isLoading}
                     />
