@@ -44,26 +44,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (credentials: LoginRequest) => {
     const response = await authService.login(credentials);
-    setUser({
-      id: 0, // We don't have ID from login response
-      username: response.username,
-      email: response.email,
-      firstName: response.firstName,
-      lastName: response.lastName,
-      role: response.role || 'Member',
-    });
+    // After successful login, fetch the full user profile to get the ID
+    try {
+      const currentUser = await authService.getCurrentUser();
+      setUser(currentUser);
+    } catch {
+      // If fetching profile fails, use data from login response (without ID)
+      setUser({
+        id: '', // Empty string as fallback
+        username: response.username,
+        email: response.email,
+        firstName: response.firstName,
+        lastName: response.lastName,
+        role: response.role || 'Member',
+      });
+    }
   };
 
   const register = async (data: RegisterRequest) => {
     const response = await authService.register(data);
-    setUser({
-      id: 0, // We don't have ID from register response
-      username: response.username,
-      email: response.email,
-      firstName: response.firstName,
-      lastName: response.lastName,
-      role: response.role || 'Member',
-    });
+    // After successful registration, fetch the full user profile to get the ID
+    try {
+      const currentUser = await authService.getCurrentUser();
+      setUser(currentUser);
+    } catch {
+      // If fetching profile fails, use data from register response (without ID)
+      setUser({
+        id: '', // Empty string as fallback
+        username: response.username,
+        email: response.email,
+        firstName: response.firstName,
+        lastName: response.lastName,
+        role: response.role || 'Member',
+      });
+    }
   };
 
   const logout = async () => {

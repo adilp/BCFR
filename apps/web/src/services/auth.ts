@@ -32,7 +32,7 @@ export interface AuthResponse {
 }
 
 export interface User {
-  id: number;
+  id: string;
   username: string;
   email: string;
   firstName: string;
@@ -65,8 +65,21 @@ class AuthService {
   }
 
   async getCurrentUser(): Promise<User> {
-    const response = await api.get<User>('/auth/me');
-    return response.data;
+    const response = await api.get('/profile');
+    // The profile endpoint returns UserProfileDto which has all the fields we need
+    const profileData = response.data;
+    const user: User = {
+      id: profileData.id,
+      username: profileData.username,
+      email: profileData.email,
+      firstName: profileData.firstName,
+      lastName: profileData.lastName,
+      role: this.getUserRole() || 'Member',
+      dateOfBirth: profileData.dateOfBirth
+    };
+    // Update stored user with full data including ID
+    this.updateStoredUser(user);
+    return user;
   }
 
   isAuthenticated(): boolean {
@@ -114,6 +127,10 @@ class AuthService {
       lastName: data.lastName,
       role: data.role,
     }));
+  }
+
+  private updateStoredUser(user: User): void {
+    localStorage.setItem('authUser', JSON.stringify(user));
   }
 
   private clearAuthData(): void {
