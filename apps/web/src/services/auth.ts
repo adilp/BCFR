@@ -18,6 +18,7 @@ export interface RegisterRequest {
   state?: string;
   zipCode?: string;
   country?: string;
+  dietaryRestrictions?: string[];
 }
 
 export interface AuthResponse {
