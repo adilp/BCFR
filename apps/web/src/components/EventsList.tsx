@@ -1,5 +1,5 @@
 import './EventsList.css'
-import { MapPinIcon, ClockIcon, UserGroupIcon, CalendarIcon, CheckCircleIcon, XCircleIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/outline'
+import { MapPinIcon, ClockIcon, UserGroupIcon, CalendarIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline'
 import { useState, useEffect } from 'react'
 import api from '../services/api'
 import { useAuth } from '../contexts/AuthContext'

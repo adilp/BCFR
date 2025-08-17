@@ -15,6 +15,7 @@ public class User
     public string? State { get; set; }
     public string? ZipCode { get; set; }
     public string? Country { get; set; } = "United States";
+    public List<string>? DietaryRestrictions { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
     public bool IsActive { get; set; } = true;

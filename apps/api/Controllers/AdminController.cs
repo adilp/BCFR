@@ -111,6 +111,7 @@ public class AdminController : ControllerBase
                 State = user.State,
                 ZipCode = user.ZipCode,
                 Country = user.Country,
+                DietaryRestrictions = user.DietaryRestrictions,
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt
             });
@@ -174,6 +175,9 @@ public class AdminController : ControllerBase
             
             if (!string.IsNullOrEmpty(request.Country))
                 user.Country = request.Country;
+            
+            if (request.DietaryRestrictions != null)
+                user.DietaryRestrictions = request.DietaryRestrictions;
 
             user.UpdatedAt = DateTime.UtcNow;
 
@@ -195,6 +199,7 @@ public class AdminController : ControllerBase
                 State = user.State,
                 ZipCode = user.ZipCode,
                 Country = user.Country,
+                DietaryRestrictions = user.DietaryRestrictions,
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt
             });
@@ -316,6 +321,7 @@ public class UserAdminResponse
     public string? Country { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
+    public List<string>? DietaryRestrictions { get; set; }
 }
 
 public class UpdateUserRequest
@@ -331,6 +337,7 @@ public class UpdateUserRequest
     public string? State { get; set; }
     public string? ZipCode { get; set; }
     public string? Country { get; set; }
+    public List<string>? DietaryRestrictions { get; set; }
 }
 
 public class UpdateRoleRequest

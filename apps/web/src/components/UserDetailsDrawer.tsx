@@ -24,6 +24,7 @@ interface User {
   stripeCustomerId?: string;
   nextBillingDate?: string;
   amount?: number;
+  dietaryRestrictions?: string[];
 }
 
 interface UserDetailsDrawerProps {
@@ -35,6 +36,7 @@ interface UserDetailsDrawerProps {
 function UserDetailsDrawer({ user, onClose, onSave }: UserDetailsDrawerProps) {
   const [editedUser, setEditedUser] = useState<User>({ ...user });
   const [activeTab, setActiveTab] = useState<'personal' | 'subscription' | 'activity'>('personal');
+  const [newRestriction, setNewRestriction] = useState('');
 
   const handleInputChange = (field: keyof User, value: any) => {
     setEditedUser(prev => ({ ...prev, [field]: value }));
@@ -42,6 +44,27 @@ function UserDetailsDrawer({ user, onClose, onSave }: UserDetailsDrawerProps) {
 
   const handleSave = () => {
     onSave(editedUser);
+  };
+
+  const handleAddRestriction = () => {
+    if (newRestriction.trim()) {
+      const currentRestrictions = editedUser.dietaryRestrictions || [];
+      if (!currentRestrictions.includes(newRestriction.trim())) {
+        setEditedUser(prev => ({
+          ...prev,
+          dietaryRestrictions: [...currentRestrictions, newRestriction.trim()]
+        }));
+        setNewRestriction('');
+      }
+    }
+  };
+
+  const handleRemoveRestriction = (index: number) => {
+    const currentRestrictions = editedUser.dietaryRestrictions || [];
+    setEditedUser(prev => ({
+      ...prev,
+      dietaryRestrictions: currentRestrictions.filter((_, i) => i !== index)
+    }));
   };
 
   return (
@@ -206,6 +229,71 @@ function UserDetailsDrawer({ user, onClose, onSave }: UserDetailsDrawerProps) {
                     />
                   </div>
                 </div>
+              </div>
+
+              <div className="form-section">
+                <h4 className="section-title">Dietary Restrictions</h4>
+                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={newRestriction}
+                    onChange={(e) => setNewRestriction(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddRestriction();
+                      }
+                    }}
+                    placeholder="Enter a dietary restriction"
+                    style={{ flex: 1 }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddRestriction}
+                    className="btn btn-secondary"
+                    disabled={!newRestriction.trim()}
+                    style={{ padding: '0.5rem 1rem' }}
+                  >
+                    Add
+                  </button>
+                </div>
+                {editedUser.dietaryRestrictions && editedUser.dietaryRestrictions.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    {editedUser.dietaryRestrictions.map((restriction, index) => (
+                      <div
+                        key={index}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          padding: '0.25rem 0.75rem',
+                          backgroundColor: '#f0f7ff',
+                          border: '1px solid #4263EB',
+                          borderRadius: '16px',
+                          fontSize: '0.9rem'
+                        }}
+                      >
+                        <span>{restriction}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveRestriction(index)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#4263EB',
+                            cursor: 'pointer',
+                            fontSize: '1.2rem',
+                            lineHeight: 1,
+                            padding: 0
+                          }}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="form-section">

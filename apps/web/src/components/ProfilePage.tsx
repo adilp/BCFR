@@ -37,8 +37,10 @@ const ProfilePage = () => {
     city: '',
     state: '',
     zipCode: '',
-    country: 'United States'
+    country: 'United States',
+    dietaryRestrictions: [] as string[]
   })
+  const [newRestriction, setNewRestriction] = useState('')
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -68,7 +70,8 @@ const ProfilePage = () => {
         city: data.city || '',
         state: data.state || '',
         zipCode: data.zipCode || '',
-        country: data.country || 'United States'
+        country: data.country || 'United States',
+        dietaryRestrictions: data.dietaryRestrictions || []
       })
     } catch (error) {
       console.error('Failed to fetch profile:', error)
@@ -155,6 +158,23 @@ const ProfilePage = () => {
       ...profileData,
       [e.target.name]: e.target.value
     })
+  }
+
+  const handleAddRestriction = () => {
+    if (newRestriction.trim() && !profileData.dietaryRestrictions.includes(newRestriction.trim())) {
+      setProfileData(prev => ({
+        ...prev,
+        dietaryRestrictions: [...prev.dietaryRestrictions, newRestriction.trim()]
+      }))
+      setNewRestriction('')
+    }
+  }
+
+  const handleRemoveRestriction = (index: number) => {
+    setProfileData(prev => ({
+      ...prev,
+      dietaryRestrictions: prev.dietaryRestrictions.filter((_, i) => i !== index)
+    }))
   }
 
   const formatDate = (dateString: string) => {
@@ -349,6 +369,98 @@ const ProfilePage = () => {
                       <option value="Canada">Canada</option>
                       <option value="Mexico">Mexico</option>
                     </select>
+                  </div>
+
+                  <div className="form-group full-width">
+                    <label className="form-label">Dietary Restrictions</label>
+                    {isEditing ? (
+                      <>
+                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                          <input
+                            type="text"
+                            className="form-input"
+                            value={newRestriction}
+                            onChange={(e) => setNewRestriction(e.target.value)}
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault()
+                                handleAddRestriction()
+                              }
+                            }}
+                            placeholder="Enter a dietary restriction"
+                            style={{ flex: 1 }}
+                          />
+                          <button
+                            type="button"
+                            onClick={handleAddRestriction}
+                            className="btn btn-secondary"
+                            disabled={!newRestriction.trim()}
+                          >
+                            Add
+                          </button>
+                        </div>
+                        {profileData.dietaryRestrictions.length > 0 && (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                            {profileData.dietaryRestrictions.map((restriction, index) => (
+                              <div
+                                key={index}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.5rem',
+                                  padding: '0.25rem 0.75rem',
+                                  backgroundColor: '#f0f7ff',
+                                  border: '1px solid #4263EB',
+                                  borderRadius: '16px',
+                                  fontSize: '0.9rem'
+                                }}
+                              >
+                                <span>{restriction}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveRestriction(index)}
+                                  style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    color: '#4263EB',
+                                    cursor: 'pointer',
+                                    fontSize: '1.2rem',
+                                    lineHeight: 1,
+                                    padding: 0
+                                  }}
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div style={{ padding: '0.5rem 0' }}>
+                        {profileData.dietaryRestrictions.length > 0 ? (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                            {profileData.dietaryRestrictions.map((restriction, index) => (
+                              <span
+                                key={index}
+                                style={{
+                                  display: 'inline-block',
+                                  padding: '0.25rem 0.75rem',
+                                  backgroundColor: '#f0f7ff',
+                                  border: '1px solid #4263EB',
+                                  borderRadius: '16px',
+                                  fontSize: '0.9rem'
+                                }}
+                              >
+                                {restriction}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span style={{ color: '#999' }}>No dietary restrictions specified</span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 

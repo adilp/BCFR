@@ -37,8 +37,13 @@ if (builder.Environment.IsProduction())
     }
 }
 
+// Configure Npgsql data source with dynamic JSON support
+var dataSourceBuilder = new Npgsql.NpgsqlDataSourceBuilder(connectionString);
+dataSourceBuilder.EnableDynamicJson();
+var dataSource = dataSourceBuilder.Build();
+
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(connectionString, npgsqlOptions =>
+    options.UseNpgsql(dataSource, npgsqlOptions =>
     {
         // Configure the migrations history table to use our custom schema
         npgsqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "memberorg");

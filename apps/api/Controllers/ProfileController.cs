@@ -63,6 +63,7 @@ public class ProfileController : ControllerBase
             State = user.State,
             ZipCode = user.ZipCode,
             Country = user.Country,
+            DietaryRestrictions = user.DietaryRestrictions,
             CreatedAt = user.CreatedAt
         };
 
@@ -117,6 +118,7 @@ public class ProfileController : ControllerBase
         user.State = updateDto.State;
         user.ZipCode = updateDto.ZipCode;
         user.Country = updateDto.Country;
+        user.DietaryRestrictions = updateDto.DietaryRestrictions;
         user.UpdatedAt = DateTime.UtcNow;
 
         try

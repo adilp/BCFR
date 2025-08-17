@@ -68,7 +68,8 @@ public class AuthController : ControllerBase
                 City = request.City,
                 State = request.State,
                 ZipCode = request.ZipCode,
-                Country = request.Country ?? "United States"
+                Country = request.Country ?? "United States",
+                DietaryRestrictions = request.DietaryRestrictions
             };
 
             _context.Users.Add(user);

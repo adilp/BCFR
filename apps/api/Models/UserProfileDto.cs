@@ -14,6 +14,7 @@ public class UserProfileDto
     public string? State { get; set; }
     public string? ZipCode { get; set; }
     public string? Country { get; set; }
+    public List<string>? DietaryRestrictions { get; set; }
     public DateTime CreatedAt { get; set; }
 }
 
@@ -30,4 +31,5 @@ public class UpdateUserProfileDto
     public string? State { get; set; }
     public string? ZipCode { get; set; }
     public string? Country { get; set; }
+    public List<string>? DietaryRestrictions { get; set; }
 }

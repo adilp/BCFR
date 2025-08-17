@@ -2,7 +2,7 @@ import './EventsPage.css'
 import { useState, useEffect } from 'react'
 import Navigation from './Navigation'
 import EventsList from './EventsList'
-import { CalendarIcon, ClockIcon, MapPinIcon, LockClosedIcon } from '@heroicons/react/24/outline'
+import { LockClosedIcon } from '@heroicons/react/24/outline'
 import { useAuth } from '../contexts/AuthContext'
 import { apiClient } from '../services/api'
 

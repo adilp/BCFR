@@ -20,12 +20,14 @@ const MembershipPage = () => {
     city: '',
     state: '',
     zipCode: '',
-    country: 'United States'
+    country: 'United States',
+    dietaryRestrictions: [] as string[]
   })
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [age, setAge] = useState<number | null>(null)
   const [isRegistered, setIsRegistered] = useState(false)
+  const [newRestriction, setNewRestriction] = useState('')
 
   // Calculate age from date of birth
   const calculateAge = (dob: string): number => {
@@ -69,6 +71,23 @@ const MembershipPage = () => {
     setError('')
   }
 
+  const handleAddRestriction = () => {
+    if (newRestriction.trim() && !formData.dietaryRestrictions.includes(newRestriction.trim())) {
+      setFormData(prev => ({
+        ...prev,
+        dietaryRestrictions: [...prev.dietaryRestrictions, newRestriction.trim()]
+      }))
+      setNewRestriction('')
+    }
+  }
+
+  const handleRemoveRestriction = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      dietaryRestrictions: prev.dietaryRestrictions.filter((_, i) => i !== index)
+    }))
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -101,7 +120,8 @@ const MembershipPage = () => {
         city: formData.city || undefined,
         state: formData.state || undefined,
         zipCode: formData.zipCode || undefined,
-        country: formData.country || undefined
+        country: formData.country || undefined,
+        dietaryRestrictions: formData.dietaryRestrictions.length > 0 ? formData.dietaryRestrictions : undefined
       })
       
       // After successful registration, show the checkout form
@@ -426,6 +446,84 @@ const MembershipPage = () => {
                       <option value="Other">Other</option>
                     </select>
                   </div>
+                </div>
+
+                {/* Dietary Restrictions */}
+                <div className="form-group full-width">
+                  <label htmlFor="dietaryRestrictions">Dietary Restrictions</label>
+                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <input
+                      type="text"
+                      id="dietaryRestrictions"
+                      value={newRestriction}
+                      onChange={(e) => setNewRestriction(e.target.value)}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          handleAddRestriction()
+                        }
+                      }}
+                      placeholder="Enter a dietary restriction"
+                      disabled={isLoading}
+                      style={{ flex: 1 }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddRestriction}
+                      disabled={isLoading || !newRestriction.trim()}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        backgroundColor: '#4263EB',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        opacity: !newRestriction.trim() ? 0.5 : 1
+                      }}
+                    >
+                      Add
+                    </button>
+                  </div>
+                  {formData.dietaryRestrictions.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      {formData.dietaryRestrictions.map((restriction, index) => (
+                        <div
+                          key={index}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            padding: '0.25rem 0.75rem',
+                            backgroundColor: '#f0f7ff',
+                            border: '1px solid #4263EB',
+                            borderRadius: '16px',
+                            fontSize: '0.9rem'
+                          }}
+                        >
+                          <span>{restriction}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveRestriction(index)}
+                            disabled={isLoading}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: '#4263EB',
+                              cursor: 'pointer',
+                              fontSize: '1.2rem',
+                              lineHeight: 1,
+                              padding: 0
+                            }}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <small style={{ color: '#666', fontSize: '0.8rem' }}>
+                    Add any dietary restrictions or allergies (e.g., vegetarian, gluten-free, nut allergy)
+                  </small>
                 </div>
               </div>
 

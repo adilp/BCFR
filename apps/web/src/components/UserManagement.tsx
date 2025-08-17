@@ -102,7 +102,8 @@ function UserManagement() {
         dateOfBirth: u.dateOfBirth,
         stripeCustomerId: u.stripeCustomerId,
         nextBillingDate: u.nextBillingDate,
-        amount: u.amount
+        amount: u.amount,
+        dietaryRestrictions: u.dietaryRestrictions
       }));
       
       setUsers(mappedUsers);
