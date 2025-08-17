@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MemberOrgApi.Data;
 using MemberOrgApi.Models;
+using MemberOrgApi.DTOs;
 using MemberOrgApi.Services;
 using MemberOrgApi.Constants;
 using System;

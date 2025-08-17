@@ -1,7 +1,4 @@
-using System;
-using System.Collections.Generic;
-
-namespace MemberOrgApi.Models;
+namespace MemberOrgApi.DTOs;
 
 public class EventDto
 {

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using MemberOrgApi.Services;
+using MemberOrgApi.DTOs;
 using System.Security.Claims;
 using Stripe;
 
@@ -170,10 +171,5 @@ namespace MemberOrgApi.Controllers
                 return StatusCode(500, "An error occurred while cancelling the subscription");
             }
         }
-    }
-
-    public class CreateCheckoutSessionRequest
-    {
-        public string MembershipTier { get; set; } = string.Empty;
     }
 }
