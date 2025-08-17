@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
-import { formatForDateInput, parseFromDateInput, addDays } from '@memberorg/shared';
+import { formatForDateInput, addDays } from '@memberorg/shared';
 import './EventDetailsDrawer.css';
 
 interface Event {
@@ -59,8 +59,13 @@ function EventDetailsDrawer({ event, isNew = false, onClose, onSave }: EventDeta
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (!isNew) {
-      setFormData(event);
+    if (!isNew && event) {
+      // Format dates for HTML input fields
+      setFormData({
+        ...event,
+        eventDate: formatForDateInput(event.eventDate),
+        rsvpDeadline: formatForDateInput(event.rsvpDeadline)
+      });
     }
   }, [event, isNew]);
 

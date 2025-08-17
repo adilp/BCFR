@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
-import { formatRelativeTime, formatDateForDisplay } from '@memberorg/shared';
+import { formatRelativeTime } from '@memberorg/shared';
 import './ActivityTimeline.css';
 
 export interface ActivityLog {
@@ -49,12 +49,6 @@ const activityColors: Record<string, string> = {
 // Use shared date utility for consistent formatting
 function formatDate(dateString: string): string {
   return formatRelativeTime(dateString);
-  
-  return date.toLocaleDateString('en-US', { 
-    month: 'short', 
-    day: 'numeric', 
-    year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined 
-  });
 }
 
 function ActivityTimeline({ userId, showFilters = false, limit = 20 }: ActivityTimelineProps) {
