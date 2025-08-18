@@ -25,7 +25,6 @@ const EventsPage = () => {
     try {
       const apiClient = getApiClient()
       const subscription = await apiClient.getSubscription()
-      console.log('Subscription data:', subscription)
       
       if (subscription) {
         console.log('Subscription status:', subscription.status)

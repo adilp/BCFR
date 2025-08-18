@@ -2,13 +2,11 @@ import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import './Navigation.css'
 import { useAuth } from '../contexts/AuthContext'
-import authService from '../services/auth'
 
 const Navigation = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const { user, isAuthenticated, logout } = useAuth()
+  const { user, isAuthenticated, logout, isAdmin } = useAuth()
   const navigate = useNavigate()
-  const isAdmin = authService.isAdmin()
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen)

@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from '@tanstack/react-router'
 import { useAuth } from '../contexts/AuthContext'
 import Navigation from './Navigation'
 import './ProfilePage.css'
@@ -9,8 +8,7 @@ import { formatDateForDisplay, type Subscription, type UpdateUserProfile } from 
 
 
 const ProfilePage = () => {
-  const { user, isAuthenticated } = useAuth()
-  const navigate = useNavigate()
+  const { user } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
   const [activeTab, setActiveTab] = useState<'profile' | 'subscription'>('profile')
   const [subscription, setSubscription] = useState<Subscription | null>(null)
@@ -33,12 +31,7 @@ const ProfilePage = () => {
   })
   const [newRestriction, setNewRestriction] = useState('')
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      navigate({ to: '/login' })
-    }
-  }, [isAuthenticated, navigate])
-
+  // No need to check auth - handled by ProtectedRoute at router level
   useEffect(() => {
     if (user) {
       fetchProfileData()

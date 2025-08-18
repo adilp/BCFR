@@ -1,6 +1,5 @@
 import { useNavigate } from '@tanstack/react-router';
 import { useAuth } from '../contexts/AuthContext';
-import authService from '../services/auth';
 import { useEffect } from 'react';
 
 interface AdminProtectedRouteProps {
@@ -8,19 +7,8 @@ interface AdminProtectedRouteProps {
 }
 
 function AdminProtectedRoute({ children }: AdminProtectedRouteProps) {
-  const { isAuthenticated, isLoading, user } = useAuth();
+  const { isAuthenticated, isLoading, user, isAdmin } = useAuth();
   const navigate = useNavigate();
-  const isAdmin = authService.isAdmin();
-
-  // Debug logging
-  console.log('AdminProtectedRoute - Debug:', {
-    isAuthenticated,
-    isAdmin,
-    isLoading,
-    userFromContext: user,
-    userFromService: authService.getStoredUser(),
-    roleFromService: authService.getUserRole()
-  });
 
   useEffect(() => {
     if (!isLoading) {

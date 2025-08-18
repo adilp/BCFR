@@ -3,11 +3,10 @@ import { useNavigate } from '@tanstack/react-router'
 import './LoginPage.css'
 import Navigation from './Navigation'
 import { useAuth } from '../contexts/AuthContext'
-import authService from '../services/auth'
 
 const LoginPage = () => {
   const navigate = useNavigate()
-  const { login } = useAuth()
+  const { login, isAdmin } = useAuth()
   const [formData, setFormData] = useState({
     username: '',
     password: ''
@@ -47,7 +46,7 @@ const LoginPage = () => {
       console.log('Login successful, checking user role')
       
       // Check if user is admin and redirect accordingly
-      if (authService.isAdmin()) {
+      if (isAdmin) {
         console.log('User is admin, redirecting to admin dashboard')
         navigate({ to: '/admin' })
       } else {

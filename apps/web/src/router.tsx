@@ -8,6 +8,7 @@ import ProfilePage from './components/ProfilePage'
 import EventsPage from './components/EventsPage'
 import AdminDashboard from './components/AdminDashboard'
 import AdminProtectedRoute from './components/AdminProtectedRoute'
+import { ProtectedRoute } from './components/ProtectedRoute'
 
 // Create root route
 const rootRoute = createRootRoute({
@@ -49,14 +50,18 @@ const membershipSuccessRoute = createRoute({
   component: MembershipSuccess
 })
 
-// Create profile page route
+// Create profile page route (protected)
 const profileRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/profile',
-  component: ProfilePage
+  component: () => (
+    <ProtectedRoute>
+      <ProfilePage />
+    </ProtectedRoute>
+  )
 })
 
-// Create events page route
+// Create events page route (public with conditional content)
 const eventsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/events',
