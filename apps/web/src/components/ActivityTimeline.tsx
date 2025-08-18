@@ -1,25 +1,23 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
 import { formatRelativeTime } from '@memberorg/shared';
+import type { Activity } from '@memberorg/shared';
 import './ActivityTimeline.css';
 
-export interface ActivityLog {
-  id: string;
-  userId: string;
-  activityType: string;
-  activityCategory: string;
-  description: string;
+// Extend the shared Activity type with additional fields specific to the timeline
+export interface ActivityLog extends Activity {
+  activityType?: string;
+  activityCategory?: string;
+  description?: string;
   oldValue?: string;
   newValue?: string;
-  ipAddress?: string;
-  userAgent?: string;
   performedById?: string;
   performedBy?: {
     firstName: string;
     lastName: string;
   };
   metadata?: string;
-  createdAt: string;
+  createdAt?: string;
 }
 
 interface ActivityTimelineProps {

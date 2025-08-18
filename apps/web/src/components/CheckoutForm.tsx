@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
+import { getApiClient } from '@memberorg/api-client';
 import { stripePromise } from '../lib/stripe';
-import { API_URL } from '../config';
 
 interface CheckoutFormProps {
   membershipTier: string;
@@ -22,11 +22,9 @@ const CheckoutForm = ({ membershipTier, onSuccess, onError }: CheckoutFormProps)
     // Fetch fee calculation when component mounts or tier changes
     const fetchFees = async () => {
       try {
-        const response = await fetch(`${API_URL}/stripe/calculate-fees/${membershipTier}`);
-        if (response.ok) {
-          const data = await response.json();
-          setFees(data);
-        }
+        const apiClient = getApiClient();
+        const data = await apiClient.calculateFees(membershipTier);
+        setFees(data);
       } catch (error) {
         console.error('Error fetching fees:', error);
       }
@@ -38,33 +36,18 @@ const CheckoutForm = ({ membershipTier, onSuccess, onError }: CheckoutFormProps)
     setIsLoading(true);
 
     try {
-      // Get auth token from localStorage
-      const token = localStorage.getItem('authToken');
-      if (!token) {
-        throw new Error('Please log in to continue');
-      }
+      const apiClient = getApiClient();
+      
+      // Create checkout session with API client
+      const data = await apiClient.createCheckoutSession(membershipTier);
 
-      // Create checkout session with your API
-      const response = await fetch(`${API_URL}/stripe/create-checkout-session`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          membershipTier
-        })
-      });
-
-      if (!response.ok) {
+      if (!data.sessionId) {
         throw new Error('Failed to create checkout session');
       }
 
-      const { sessionId, url } = await response.json();
-
       // Redirect to Stripe Checkout
-      if (url) {
-        window.location.href = url;
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
       } else {
         // Fallback to using Stripe.js if URL not provided
         const stripe = await stripePromise;
@@ -73,7 +56,7 @@ const CheckoutForm = ({ membershipTier, onSuccess, onError }: CheckoutFormProps)
         }
 
         const { error } = await stripe.redirectToCheckout({
-          sessionId
+          sessionId: data.sessionId
         });
 
         if (error) {

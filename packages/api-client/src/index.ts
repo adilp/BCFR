@@ -276,6 +276,18 @@ export class ApiClient {
   async getHello(): Promise<{ message: string }> {
     return this.request<{ message: string }>('/hello');
   }
+
+  // Stripe endpoints
+  async calculateFees(tier: string): Promise<{ basePrice: number; processingFee: number; total: number }> {
+    return this.request<{ basePrice: number; processingFee: number; total: number }>(`/stripe/calculate-fees/${tier}`);
+  }
+
+  async createCheckoutSession(membershipTier: string): Promise<{ sessionId: string; checkoutUrl: string }> {
+    return this.request<{ sessionId: string; checkoutUrl: string }>('/stripe/create-checkout-session', {
+      method: 'POST',
+      body: JSON.stringify({ membershipTier }),
+    });
+  }
 }
 
 // Export a singleton instance that can be configured

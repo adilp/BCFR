@@ -3,6 +3,7 @@ import { MapPinIcon, ClockIcon, UserGroupIcon, CalendarIcon, CheckCircleIcon, XC
 import { useState, useEffect } from 'react'
 import { getApiClient } from '@memberorg/api-client'
 import type { Event } from '@memberorg/shared'
+import { formatDateForDisplay } from '@memberorg/shared'
 import { useAuth } from '../contexts/AuthContext'
 
 interface EventDisplay extends Event {
@@ -102,6 +103,17 @@ const EventsList = ({ events: propEvents, showHeader = true, showDetails = false
   const [loading, setLoading] = useState(!propEvents)
   const [userRsvps, setUserRsvps] = useState<Record<string, { status: 'yes' | 'no' | 'pending', plusOne: boolean }>>({})
 
+  // Helper function to format event for display
+  const formatEventForDisplay = (event: Event): EventDisplay => {
+    const eventDate = new Date(event.eventDate)
+    return {
+      ...event,
+      day: eventDate.getDate().toString(),
+      month: eventDate.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
+      time: `${event.eventTime} - ${event.endTime}`
+    }
+  }
+
   useEffect(() => {
     if (!propEvents) {
       fetchEvents()
@@ -159,22 +171,12 @@ const EventsList = ({ events: propEvents, showHeader = true, showDetails = false
           .filter((event: Event) => new Date(event.eventDate) < now)
           .sort((a: Event, b: Event) => new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime())
           .slice(0, 2)
-          .map((event: Event): EventDisplay => ({
-            ...event,
-            day: new Date(event.eventDate).getDate().toString(),
-            month: new Date(event.eventDate).toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
-            time: `${event.eventTime} - ${event.endTime}`
-          }))
+          .map((event: Event): EventDisplay => formatEventForDisplay(event))
         setEvents(pastEvents)
       } else {
         // Fetch upcoming events
         const fetchedEvents = await apiClient.getEvents({ status: 'published' })
-        const formattedEvents: EventDisplay[] = fetchedEvents.map((event: Event) => ({
-          ...event,
-          day: new Date(event.eventDate).getDate().toString(),
-          month: new Date(event.eventDate).toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
-          time: `${event.eventTime} - ${event.endTime}`
-        }))
+        const formattedEvents: EventDisplay[] = fetchedEvents.map((event: Event) => formatEventForDisplay(event))
         setEvents(formattedEvents)
       }
     } catch (error) {
@@ -209,12 +211,7 @@ const EventsList = ({ events: propEvents, showHeader = true, showDetails = false
 
       // Refresh event to get updated RSVP stats
       const updatedEvent = await apiClient.getEvent(eventId)
-      setEvents(prev => prev.map(e => e.id === eventId ? {
-        ...updatedEvent,
-        day: new Date(updatedEvent.eventDate).getDate().toString(),
-        month: new Date(updatedEvent.eventDate).toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
-        time: `${updatedEvent.eventTime} - ${updatedEvent.endTime}`
-      } : e))
+      setEvents(prev => prev.map(e => e.id === eventId ? formatEventForDisplay(updatedEvent) : e))
     } catch (error: any) {
       console.error('Failed to submit RSVP:', error)
       alert(error.message || 'Failed to submit RSVP')
@@ -302,7 +299,7 @@ const EventsList = ({ events: propEvents, showHeader = true, showDetails = false
                     <div className="detail-item">
                       <CalendarIcon className="detail-icon" />
                       <span className="detail-label">RSVP Deadline:</span>
-                      <span>{new Date(event.rsvpDeadline).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
+                      <span>{formatDateForDisplay(event.rsvpDeadline, { format: 'long' })}</span>
                     </div>
                   )}
                   

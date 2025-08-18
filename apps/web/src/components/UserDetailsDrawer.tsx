@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { User } from '@memberorg/shared';
 import ActivityTimeline from './ActivityTimeline';
 import Drawer from './shared/Drawer';
 import TabNavigation from './shared/TabNavigation';
@@ -6,25 +7,10 @@ import { FormSection, FormGroup, FormGrid } from './shared/FormSection';
 import Badge, { getStatusBadgeVariant } from './shared/Badge';
 import './UserDetailsDrawer.css';
 
-interface User {
-  id: string;
-  username: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  phone?: string;
-  role: string;
+// Extend the shared User type with subscription fields
+interface UserWithSubscription extends User {
   membershipTier?: string;
   subscriptionStatus?: string;
-  joinDate?: string; // Made optional to match UserWithSubscription
-  lastLogin?: string;
-  isActive: boolean;
-  address?: string;
-  city?: string;
-  state?: string;
-  zipCode?: string;
-  country?: string;
-  dateOfBirth?: string;
   stripeCustomerId?: string;
   nextBillingDate?: string;
   amount?: number;
@@ -32,13 +18,13 @@ interface User {
 }
 
 interface UserDetailsDrawerProps {
-  user: User;
+  user: UserWithSubscription;
   onClose: () => void;
-  onSave: (user: User) => void;
+  onSave: (user: UserWithSubscription) => void;
 }
 
 function UserDetailsDrawer({ user, onClose, onSave }: UserDetailsDrawerProps) {
-  const [editedUser, setEditedUser] = useState<User>({ ...user });
+  const [editedUser, setEditedUser] = useState<UserWithSubscription>({ ...user });
   const [activeTab, setActiveTab] = useState('personal');
   const [newRestriction, setNewRestriction] = useState('');
 

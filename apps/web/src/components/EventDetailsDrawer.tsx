@@ -1,25 +1,9 @@
 import { useState, useEffect } from 'react';
 import { formatForDateInput, addDays } from '@memberorg/shared';
+import type { Event } from '@memberorg/shared';
 import Drawer from './shared/Drawer';
 import { FormSection, FormGroup, FormGrid } from './shared/FormSection';
 import './EventDetailsDrawer.css';
-
-interface Event {
-  id: string;
-  title: string;
-  description: string;
-  eventDate: string;
-  eventTime: string;
-  endTime: string;
-  location: string;
-  speaker: string;
-  speakerTitle?: string;
-  speakerBio?: string;
-  rsvpDeadline: string;
-  maxAttendees?: number;
-  allowPlusOne: boolean;
-  status: 'draft' | 'published' | 'cancelled';
-}
 
 interface EventDetailsDrawerProps {
   event: Event;
