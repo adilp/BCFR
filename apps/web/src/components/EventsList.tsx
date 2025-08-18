@@ -128,6 +128,49 @@ const EventsList = ({ events: propEvents, showHeader = true, showDetails = false
     }
   }, [propEvents])
 
+  useEffect(() => {
+    // Fetch user's RSVP status for all events when authenticated
+    if (isAuthenticated && events.length > 0) {
+      fetchUserRsvps()
+    }
+  }, [isAuthenticated, events])
+
+  const fetchUserRsvps = async () => {
+    try {
+      const rsvpPromises = events.map(async (event) => {
+        try {
+          const response = await api.get(`/events/${event.id}/my-rsvp`)
+          return {
+            eventId: event.id,
+            rsvp: response.data
+          }
+        } catch (error) {
+          // User hasn't RSVP'd to this event yet
+          return {
+            eventId: event.id,
+            rsvp: null
+          }
+        }
+      })
+
+      const rsvpResults = await Promise.all(rsvpPromises)
+      const rsvpMap: Record<string, any> = {}
+      
+      rsvpResults.forEach(result => {
+        if (result.rsvp) {
+          rsvpMap[result.eventId] = {
+            status: result.rsvp.response,
+            plusOne: result.rsvp.hasPlusOne
+          }
+        }
+      })
+      
+      setUserRsvps(rsvpMap)
+    } catch (error) {
+      console.error('Failed to fetch user RSVPs:', error)
+    }
+  }
+
   const fetchEvents = async () => {
     try {
       setLoading(true)
