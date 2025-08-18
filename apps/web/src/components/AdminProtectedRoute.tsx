@@ -8,15 +8,27 @@ interface AdminProtectedRouteProps {
 }
 
 function AdminProtectedRoute({ children }: AdminProtectedRouteProps) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const navigate = useNavigate();
   const isAdmin = authService.isAdmin();
+
+  // Debug logging
+  console.log('AdminProtectedRoute - Debug:', {
+    isAuthenticated,
+    isAdmin,
+    isLoading,
+    userFromContext: user,
+    userFromService: authService.getStoredUser(),
+    roleFromService: authService.getUserRole()
+  });
 
   useEffect(() => {
     if (!isLoading) {
       if (!isAuthenticated) {
+        console.log('Not authenticated, redirecting to login');
         navigate({ to: '/login' });
       } else if (!isAdmin) {
+        console.log('Not admin, redirecting to home');
         navigate({ to: '/' });
       }
     }

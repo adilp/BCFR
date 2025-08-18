@@ -56,7 +56,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: response.email,
         firstName: response.firstName,
         lastName: response.lastName,
-        role: response.role || 'Member',
+        role: (response.role || 'Member') as 'Admin' | 'Member',
+        isActive: true,
+        createdAt: new Date().toISOString()
       });
     }
   };
@@ -75,7 +77,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: response.email,
         firstName: response.firstName,
         lastName: response.lastName,
-        role: response.role || 'Member',
+        role: (response.role || 'Member') as 'Admin' | 'Member',
+        isActive: true,
+        createdAt: new Date().toISOString()
       });
     }
   };

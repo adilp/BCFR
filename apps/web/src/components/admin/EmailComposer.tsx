@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
-import api from '../../services/api';
+import { getApiClient } from '@memberorg/api-client';
+import type { EmailRequest } from '@memberorg/shared';
 import './EmailComposer.css';
 
 interface EmailComposerProps {
@@ -89,15 +90,17 @@ const EmailComposer: React.FC<EmailComposerProps> = ({ className = '' }) => {
     setMessage(null);
 
     try {
-      const response = await api.post('/adminemail/send', {
+      const apiClient = getApiClient();
+      const emailData: EmailRequest = {
         toEmails: toEmailList,
         subject,
         body,
         isHtml
-      });
+      };
+      const response = await apiClient.sendBroadcastEmail(emailData);
 
-      if (response.data.success) {
-        setMessage({ type: 'success', text: response.data.message });
+      if (response.success) {
+        setMessage({ type: 'success', text: response.message });
         // Clear form
         setToEmails('');
         setSubject('');
@@ -106,12 +109,12 @@ const EmailComposer: React.FC<EmailComposerProps> = ({ className = '' }) => {
           editorRef.current.innerHTML = '';
         }
       } else {
-        setMessage({ type: 'error', text: response.data.message || 'Failed to send email' });
+        setMessage({ type: 'error', text: response.message || 'Failed to send email' });
       }
     } catch (error: any) {
       setMessage({ 
         type: 'error', 
-        text: error.response?.data?.message || 'Failed to send email. Please try again.' 
+        text: error.message || 'Failed to send email. Please try again.' 
       });
     } finally {
       setSending(false);

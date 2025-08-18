@@ -4,7 +4,7 @@ import Navigation from './Navigation'
 import EventsList from './EventsList'
 import { LockClosedIcon } from '@heroicons/react/24/outline'
 import { useAuth } from '../contexts/AuthContext'
-import { apiClient } from '../services/api'
+import { getApiClient } from '@memberorg/api-client'
 
 const EventsPage = () => {
   const { isAuthenticated, user } = useAuth()
@@ -23,9 +23,17 @@ const EventsPage = () => {
     }
 
     try {
-      const response = await apiClient.get('/profile/subscription')
-      const subscription = response.data
-      setHasActiveSubscription(subscription && subscription.status === 'active')
+      const apiClient = getApiClient()
+      const subscription = await apiClient.getSubscription()
+      console.log('Subscription data:', subscription)
+      
+      if (subscription) {
+        console.log('Subscription status:', subscription.status)
+        setHasActiveSubscription(subscription.status === 'active')
+      } else {
+        console.log('No subscription found')
+        setHasActiveSubscription(false)
+      }
     } catch (error) {
       console.error('Failed to fetch subscription:', error)
       setHasActiveSubscription(false)

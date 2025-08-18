@@ -1,12 +1,5 @@
-export interface User {
-  id: string;
-  username: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  role: string;
-  dateOfBirth?: string;
-}
+// Re-export all types
+export * from './types';
 
 export const APP_NAME = "Member Organization";
 

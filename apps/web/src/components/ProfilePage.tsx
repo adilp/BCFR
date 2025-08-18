@@ -3,19 +3,9 @@ import { useNavigate } from '@tanstack/react-router'
 import { useAuth } from '../contexts/AuthContext'
 import Navigation from './Navigation'
 import './ProfilePage.css'
-import { apiClient } from '../services/api'
-import { formatDateForDisplay } from '@memberorg/shared'
+import { getApiClient } from '@memberorg/api-client'
+import { formatDateForDisplay, type Subscription, type UpdateUserProfile } from '@memberorg/shared'
 
-interface SubscriptionData {
-  id: string
-  status: string
-  membershipTier: string
-  amount: number
-  nextBillingDate: string
-  startDate: string
-  endDate?: string
-  createdAt: string
-}
 
 
 const ProfilePage = () => {
@@ -23,7 +13,7 @@ const ProfilePage = () => {
   const navigate = useNavigate()
   const [isEditing, setIsEditing] = useState(false)
   const [activeTab, setActiveTab] = useState<'profile' | 'subscription'>('profile')
-  const [subscription, setSubscription] = useState<SubscriptionData | null>(null)
+  const [subscription, setSubscription] = useState<Subscription | null>(null)
   // const [paymentHistory, setPaymentHistory] = useState<PaymentHistory[]>([])
   const [loading, setLoading] = useState(false)
   
@@ -58,8 +48,8 @@ const ProfilePage = () => {
 
   const fetchProfileData = async () => {
     try {
-      const response = await apiClient.get('/profile')
-      const data = response.data
+      const apiClient = getApiClient()
+      const data = await apiClient.getProfile()
       setProfileData({
         firstName: data.firstName || '',
         lastName: data.lastName || '',
@@ -92,8 +82,9 @@ const ProfilePage = () => {
   const fetchSubscriptionData = async () => {
     setLoading(true)
     try {
-      const response = await apiClient.get('/profile/subscription')
-      setSubscription(response.data)
+      const apiClient = getApiClient()
+      const data = await apiClient.getSubscription()
+      setSubscription(data)
     } catch (error) {
       console.error('Failed to fetch subscription:', error)
       setSubscription(null)
@@ -141,13 +132,28 @@ const ProfilePage = () => {
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      await apiClient.put('/profile', profileData)
+      const apiClient = getApiClient()
+      const updateData: UpdateUserProfile = {
+        firstName: profileData.firstName,
+        lastName: profileData.lastName,
+        email: profileData.email,
+        username: profileData.username,
+        dateOfBirth: profileData.dateOfBirth,
+        phone: profileData.phone,
+        address: profileData.address,
+        city: profileData.city,
+        state: profileData.state,
+        zipCode: profileData.zipCode,
+        country: profileData.country,
+        dietaryRestrictions: profileData.dietaryRestrictions
+      }
+      await apiClient.updateProfile(updateData)
       setIsEditing(false)
       alert('Profile updated successfully!')
     } catch (error: any) {
       console.error('Failed to update profile:', error)
-      if (error.response?.data?.message) {
-        alert(error.response.data.message)
+      if (error.message) {
+        alert(error.message)
       } else {
         alert('Failed to update profile. Please try again.')
       }

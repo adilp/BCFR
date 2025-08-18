@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import UserDetailsDrawer from './UserDetailsDrawer';
-import api from '../services/api';
+import { getApiClient } from '@memberorg/api-client';
+import type { User } from '@memberorg/shared';
 import { 
   MagnifyingGlassIcon,
   ChevronRightIcon,
@@ -11,35 +12,21 @@ import {
 } from '@heroicons/react/24/outline';
 import './UserManagement.css';
 
-interface User {
-  id: string;
-  username: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  phone?: string;
-  role: string;
+interface UserWithSubscription extends Omit<User, 'role'> {
+  role: string; // Override to allow any string, not just 'Admin' | 'Member'
   membershipTier?: string;
   subscriptionStatus?: string;
-  joinDate: string;
+  joinDate?: string;
   lastLogin?: string;
-  isActive: boolean;
-  address?: string;
-  city?: string;
-  state?: string;
-  zipCode?: string;
-  country?: string;
-  dateOfBirth?: string;
   stripeCustomerId?: string;
   nextBillingDate?: string;
   amount?: number;
-  createdAt?: string;
-  updatedAt?: string;
+  dietaryRestrictions?: string[];
 }
 
 function UserManagement() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [users, setUsers] = useState<UserWithSubscription[]>([]);
+  const [selectedUser, setSelectedUser] = useState<UserWithSubscription | null>(null);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState('all');
@@ -59,70 +46,65 @@ function UserManagement() {
       setLoading(true);
       setError(null);
       
-      // Build query params
-      const params = new URLSearchParams();
-      params.append('page', currentPage.toString());
-      params.append('pageSize', pageSize.toString());
+      const apiClient = getApiClient();
+      const { users: fetchedUsers, totalCount } = await apiClient.getUsers({
+        page: currentPage,
+        pageSize,
+        role: filterRole !== 'all' ? filterRole : undefined,
+        isActive: filterStatus !== 'all' ? filterStatus === 'active' : undefined
+      });
       
-      if (filterRole !== 'all') {
-        params.append('role', filterRole);
-      }
+      setTotalCount(totalCount);
       
-      if (filterStatus !== 'all') {
-        params.append('isActive', filterStatus === 'active' ? 'true' : 'false');
-      }
-      
-      const response = await api.get(`/admin/users?${params.toString()}`);
-      
-      // Get pagination info from headers
-      const total = response.headers['x-total-count'];
-      if (total) {
-        setTotalCount(parseInt(total));
-      }
-      
-      // Map API response to User interface
-      const mappedUsers = response.data.map((u: any) => ({
-        id: u.id,
-        username: u.username,
-        email: u.email,
-        firstName: u.firstName,
-        lastName: u.lastName,
-        phone: u.phone,
-        role: u.role,
+      // Map API response to UserWithSubscription interface
+      const mappedUsers: UserWithSubscription[] = fetchedUsers.map((u: any) => ({
+        ...u,
         membershipTier: u.membershipTier,
         subscriptionStatus: u.subscriptionStatus,
         joinDate: u.createdAt,
         lastLogin: u.updatedAt,
-        isActive: u.isActive,
-        address: u.address,
-        city: u.city,
-        state: u.state,
-        zipCode: u.zipCode,
-        country: u.country,
-        dateOfBirth: u.dateOfBirth,
         stripeCustomerId: u.stripeCustomerId,
         nextBillingDate: u.nextBillingDate,
         amount: u.amount,
-        dietaryRestrictions: u.dietaryRestrictions
+        dietaryRestrictions: u.dietaryRestrictions || []
       }));
       
       setUsers(mappedUsers);
     } catch (err: any) {
       console.error('Failed to fetch users:', err);
-      setError(err.response?.data?.message || 'Failed to load users');
+      setError(err.message || 'Failed to load users');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSaveUser = async (updatedUser: User) => {
+  const handleSaveUser = async (updatedUser: UserWithSubscription) => {
     try {
-      await api.put(`/admin/users/${updatedUser.id}`, updatedUser);
+      const apiClient = getApiClient();
+      // Convert UserWithSubscription to User for API call
+      const userUpdate: Partial<User> = {
+        id: updatedUser.id,
+        username: updatedUser.username,
+        email: updatedUser.email,
+        firstName: updatedUser.firstName,
+        lastName: updatedUser.lastName,
+        role: updatedUser.role as 'Admin' | 'Member',
+        phone: updatedUser.phone,
+        address: updatedUser.address,
+        city: updatedUser.city,
+        state: updatedUser.state,
+        zipCode: updatedUser.zipCode,
+        country: updatedUser.country,
+        dateOfBirth: updatedUser.dateOfBirth,
+        isActive: updatedUser.isActive,
+        dietaryRestrictions: updatedUser.dietaryRestrictions
+      };
+      await apiClient.updateUser(updatedUser.id, userUpdate);
       await fetchUsers(); // Refresh the list
       setSelectedUser(null);
     } catch (err: any) {
       console.error('Failed to update user:', err);
-      alert(err.response?.data?.message || 'Failed to update user');
+      alert(err.message || 'Failed to update user');
     }
   };
 
@@ -305,7 +287,7 @@ function UserManagement() {
                             </div>
                             <div className="detail-item">
                               <span className="detail-label">Join Date:</span>
-                              <span className="detail-value">{user.joinDate}</span>
+                              <span className="detail-value">{user.joinDate || user.createdAt || 'Unknown'}</span>
                             </div>
                             <div className="detail-item">
                               <span className="detail-label">Last Login:</span>

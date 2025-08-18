@@ -1,29 +1,11 @@
 import './EventsList.css'
 import { MapPinIcon, ClockIcon, UserGroupIcon, CalendarIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline'
 import { useState, useEffect } from 'react'
-import api from '../services/api'
+import { getApiClient } from '@memberorg/api-client'
+import type { Event } from '@memberorg/shared'
 import { useAuth } from '../contexts/AuthContext'
 
-interface Event {
-  id: string
-  title: string
-  description: string
-  eventDate: string
-  eventTime: string
-  endTime: string
-  location: string
-  speaker: string
-  speakerTitle?: string
-  rsvpDeadline: string
-  maxAttendees?: number
-  allowPlusOne: boolean
-  status: string
-  rsvpStats?: {
-    yes: number
-    no: number
-    pending: number
-    plusOnes: number
-  }
+interface EventDisplay extends Event {
   // For display
   day?: string
   month?: string
@@ -33,13 +15,13 @@ interface Event {
 }
 
 interface EventsListProps {
-  events?: Event[]
+  events?: EventDisplay[]
   showHeader?: boolean
   showDetails?: boolean
   isPast?: boolean
 }
 
-const defaultEvents: Event[] = [
+const defaultEvents: EventDisplay[] = [
   {
     id: '1',
     day: '15',
@@ -116,9 +98,9 @@ const defaultEvents: Event[] = [
 
 const EventsList = ({ events: propEvents, showHeader = true, showDetails = false, isPast = false }: EventsListProps) => {
   const { isAuthenticated } = useAuth()
-  const [events, setEvents] = useState<Event[]>(propEvents || [])
+  const [events, setEvents] = useState<EventDisplay[]>(propEvents || [])
   const [loading, setLoading] = useState(!propEvents)
-  const [userRsvps, setUserRsvps] = useState<Record<string, any>>({})
+  const [userRsvps, setUserRsvps] = useState<Record<string, { status: 'yes' | 'no' | 'pending', plusOne: boolean }>>({})
 
   useEffect(() => {
     if (!propEvents) {
@@ -137,24 +119,17 @@ const EventsList = ({ events: propEvents, showHeader = true, showDetails = false
 
   const fetchUserRsvps = async () => {
     try {
+      const apiClient = getApiClient()
       const rsvpPromises = events.map(async (event) => {
-        try {
-          const response = await api.get(`/events/${event.id}/my-rsvp`)
-          return {
-            eventId: event.id,
-            rsvp: response.data
-          }
-        } catch (error) {
-          // User hasn't RSVP'd to this event yet
-          return {
-            eventId: event.id,
-            rsvp: null
-          }
+        const rsvp = await apiClient.getMyRsvp(event.id)
+        return {
+          eventId: event.id,
+          rsvp
         }
       })
 
       const rsvpResults = await Promise.all(rsvpPromises)
-      const rsvpMap: Record<string, any> = {}
+      const rsvpMap: Record<string, { status: 'yes' | 'no' | 'pending', plusOne: boolean }> = {}
       
       rsvpResults.forEach(result => {
         if (result.rsvp) {
@@ -174,15 +149,17 @@ const EventsList = ({ events: propEvents, showHeader = true, showDetails = false
   const fetchEvents = async () => {
     try {
       setLoading(true)
+      const apiClient = getApiClient()
+      
       if (isPast) {
         // Fetch past events
-        const response = await api.get('/events')
+        const allEvents = await apiClient.getEvents()
         const now = new Date()
-        const pastEvents = response.data
-          .filter((event: any) => new Date(event.eventDate) < now)
-          .sort((a: any, b: any) => new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime())
+        const pastEvents = allEvents
+          .filter((event: Event) => new Date(event.eventDate) < now)
+          .sort((a: Event, b: Event) => new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime())
           .slice(0, 2)
-          .map((event: any) => ({
+          .map((event: Event): EventDisplay => ({
             ...event,
             day: new Date(event.eventDate).getDate().toString(),
             month: new Date(event.eventDate).toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
@@ -191,8 +168,8 @@ const EventsList = ({ events: propEvents, showHeader = true, showDetails = false
         setEvents(pastEvents)
       } else {
         // Fetch upcoming events
-        const response = await api.get('/events?status=published')
-        const formattedEvents = response.data.map((event: any) => ({
+        const fetchedEvents = await apiClient.getEvents({ status: 'published' })
+        const formattedEvents: EventDisplay[] = fetchedEvents.map((event: Event) => ({
           ...event,
           day: new Date(event.eventDate).getDate().toString(),
           month: new Date(event.eventDate).toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
@@ -219,7 +196,8 @@ const EventsList = ({ events: propEvents, showHeader = true, showDetails = false
     }
 
     try {
-      await api.post(`/events/${eventId}/rsvp`, {
+      const apiClient = getApiClient()
+      await apiClient.createRsvp(eventId, {
         response: status,
         hasPlusOne: userRsvps[eventId]?.plusOne || false
       })
@@ -230,16 +208,16 @@ const EventsList = ({ events: propEvents, showHeader = true, showDetails = false
       }))
 
       // Refresh event to get updated RSVP stats
-      const eventResponse = await api.get(`/events/${eventId}`)
+      const updatedEvent = await apiClient.getEvent(eventId)
       setEvents(prev => prev.map(e => e.id === eventId ? {
-        ...eventResponse.data,
-        day: new Date(eventResponse.data.eventDate).getDate().toString(),
-        month: new Date(eventResponse.data.eventDate).toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
-        time: `${eventResponse.data.eventTime} - ${eventResponse.data.endTime}`
+        ...updatedEvent,
+        day: new Date(updatedEvent.eventDate).getDate().toString(),
+        month: new Date(updatedEvent.eventDate).toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
+        time: `${updatedEvent.eventTime} - ${updatedEvent.endTime}`
       } : e))
     } catch (error: any) {
       console.error('Failed to submit RSVP:', error)
-      alert(error.response?.data?.message || 'Failed to submit RSVP')
+      alert(error.message || 'Failed to submit RSVP')
     }
   }
 
@@ -247,8 +225,12 @@ const EventsList = ({ events: propEvents, showHeader = true, showDetails = false
     if (!isAuthenticated) return
 
     try {
-      await api.post(`/events/${eventId}/rsvp`, {
-        response: userRsvps[eventId]?.status || 'yes',
+      const apiClient = getApiClient()
+      const currentStatus = userRsvps[eventId]?.status || 'yes'
+      // Only send yes or no to API (pending is not valid for submission)
+      const responseStatus = currentStatus === 'pending' ? 'yes' : currentStatus
+      await apiClient.createRsvp(eventId, {
+        response: responseStatus as 'yes' | 'no',
         hasPlusOne
       })
       
@@ -258,7 +240,7 @@ const EventsList = ({ events: propEvents, showHeader = true, showDetails = false
       }))
     } catch (error: any) {
       console.error('Failed to update plus one:', error)
-      alert(error.response?.data?.message || 'Failed to update plus one')
+      alert(error.message || 'Failed to update plus one')
     }
   }
 

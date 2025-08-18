@@ -12,7 +12,7 @@ interface User {
   role: string;
   membershipTier?: string;
   subscriptionStatus?: string;
-  joinDate: string;
+  joinDate?: string; // Made optional to match UserWithSubscription
   lastLogin?: string;
   isActive: boolean;
   address?: string;

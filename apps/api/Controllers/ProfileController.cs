@@ -57,6 +57,7 @@ public class ProfileController : ControllerBase
             Email = user.Email,
             FirstName = user.FirstName,
             LastName = user.LastName,
+            Role = user.Role,
             DateOfBirth = user.DateOfBirth,
             Phone = user.Phone,
             Address = user.Address,
@@ -65,7 +66,8 @@ public class ProfileController : ControllerBase
             ZipCode = user.ZipCode,
             Country = user.Country,
             DietaryRestrictions = user.DietaryRestrictions,
-            CreatedAt = user.CreatedAt
+            CreatedAt = user.CreatedAt,
+            IsActive = user.IsActive
         };
 
         return Ok(profileDto);

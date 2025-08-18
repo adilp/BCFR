@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import EventDetailsDrawer from './EventDetailsDrawer';
-import api from '../services/api';
+import { getApiClient } from '@memberorg/api-client';
+import type { Event, EventRsvp, CreateEventRequest } from '@memberorg/shared';
 import { formatDateForDisplay } from '@memberorg/shared';
 import { 
   MagnifyingGlassIcon,
@@ -17,43 +18,6 @@ import {
 } from '@heroicons/react/24/outline';
 import './EventManagement.css';
 
-interface Event {
-  id: string;
-  title: string;
-  description: string;
-  eventDate: string;
-  eventTime: string;
-  endTime: string;
-  location: string;
-  speaker: string;
-  speakerTitle?: string;
-  speakerBio?: string;
-  rsvpDeadline: string;
-  maxAttendees?: number;
-  allowPlusOne: boolean;
-  status: 'draft' | 'published' | 'cancelled';
-  createdBy?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  rsvpStats?: {
-    yes: number;
-    no: number;
-    pending: number;
-    plusOnes: number;
-  };
-}
-
-interface EventRsvp {
-  id: string;
-  userId: string;
-  userName: string;
-  userEmail: string;
-  response: 'yes' | 'no' | 'pending';
-  hasPlusOne: boolean;
-  responseDate: string;
-  checkedIn?: boolean;
-  checkInTime?: string;
-}
 
 function EventManagement() {
   const [events, setEvents] = useState<Event[]>([]);
@@ -74,11 +38,12 @@ function EventManagement() {
     try {
       setLoading(true);
       setError(null);
-      const response = await api.get('/events');
-      setEvents(response.data);
+      const apiClient = getApiClient();
+      const events = await apiClient.getEvents();
+      setEvents(events);
     } catch (err: any) {
       console.error('Failed to fetch events:', err);
-      setError(err.response?.data?.message || 'Failed to load events');
+      setError(err.message || 'Failed to load events');
     } finally {
       setLoading(false);
     }
@@ -87,8 +52,9 @@ function EventManagement() {
 
   const fetchEventRsvps = async (eventId: string) => {
     try {
-      const response = await api.get(`/events/${eventId}/rsvps`);
-      setEventRsvps(prev => ({ ...prev, [eventId]: response.data }));
+      const apiClient = getApiClient();
+      const rsvps = await apiClient.getEventRsvps(eventId);
+      setEventRsvps(prev => ({ ...prev, [eventId]: rsvps }));
     } catch (err: any) {
       console.error(`Failed to fetch RSVPs for event ${eventId}:`, err);
     }
@@ -110,58 +76,48 @@ function EventManagement() {
 
   const handleSaveEvent = async (updatedEvent: Event) => {
     try {
+      const apiClient = getApiClient();
+      const eventData = {
+        title: updatedEvent.title,
+        description: updatedEvent.description,
+        eventDate: updatedEvent.eventDate,
+        eventTime: updatedEvent.eventTime,
+        endTime: updatedEvent.endTime,
+        location: updatedEvent.location,
+        speaker: updatedEvent.speaker,
+        speakerTitle: updatedEvent.speakerTitle,
+        speakerBio: updatedEvent.speakerBio,
+        rsvpDeadline: updatedEvent.rsvpDeadline,
+        maxAttendees: updatedEvent.maxAttendees,
+        allowPlusOne: updatedEvent.allowPlusOne,
+        status: updatedEvent.status
+      };
+      
       if (updatedEvent.id) {
         // Update existing event
-        await api.put(`/events/${updatedEvent.id}`, {
-          title: updatedEvent.title,
-          description: updatedEvent.description,
-          eventDate: updatedEvent.eventDate,
-          eventTime: updatedEvent.eventTime,
-          endTime: updatedEvent.endTime,
-          location: updatedEvent.location,
-          speaker: updatedEvent.speaker,
-          speakerTitle: updatedEvent.speakerTitle,
-          speakerBio: updatedEvent.speakerBio,
-          rsvpDeadline: updatedEvent.rsvpDeadline,
-          maxAttendees: updatedEvent.maxAttendees,
-          allowPlusOne: updatedEvent.allowPlusOne,
-          status: updatedEvent.status
-        });
+        await apiClient.updateEvent(updatedEvent.id, eventData);
       } else {
         // Create new event
-        await api.post('/events', {
-          title: updatedEvent.title,
-          description: updatedEvent.description,
-          eventDate: updatedEvent.eventDate,
-          eventTime: updatedEvent.eventTime,
-          endTime: updatedEvent.endTime,
-          location: updatedEvent.location,
-          speaker: updatedEvent.speaker,
-          speakerTitle: updatedEvent.speakerTitle,
-          speakerBio: updatedEvent.speakerBio,
-          rsvpDeadline: updatedEvent.rsvpDeadline,
-          maxAttendees: updatedEvent.maxAttendees,
-          allowPlusOne: updatedEvent.allowPlusOne,
-          status: updatedEvent.status
-        });
+        await apiClient.createEvent(eventData as CreateEventRequest);
       }
       await fetchEvents(); // Refresh the list
       setSelectedEvent(null);
       setShowNewEventDrawer(false);
     } catch (err: any) {
       console.error('Failed to save event:', err);
-      alert(err.response?.data?.message || 'Failed to save event');
+      alert(err.message || 'Failed to save event');
     }
   };
 
   const handleDeleteEvent = async (eventId: string) => {
     if (confirm('Are you sure you want to delete this event?')) {
       try {
-        await api.delete(`/events/${eventId}`);
+        const apiClient = getApiClient();
+        await apiClient.deleteEvent(eventId);
         await fetchEvents(); // Refresh the list
       } catch (err: any) {
         console.error('Failed to delete event:', err);
-        alert(err.response?.data?.message || 'Failed to delete event');
+        alert(err.message || 'Failed to delete event');
       }
     }
   };

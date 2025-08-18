@@ -1,59 +1,43 @@
 import api from './api';
+import { getApiClient } from '@memberorg/api-client';
+import type { User as SharedUser, LoginRequest as SharedLoginRequest, RegisterRequest as SharedRegisterRequest, AuthResponse as SharedAuthResponse } from '@memberorg/shared';
 
-export interface LoginRequest {
-  username: string;
-  password: string;
-}
-
-export interface RegisterRequest {
-  username: string;
-  email: string;
-  password: string;
-  firstName: string;
-  lastName: string;
-  dateOfBirth?: string;
-  phone?: string;
-  address?: string;
-  city?: string;
-  state?: string;
-  zipCode?: string;
-  country?: string;
-  dietaryRestrictions?: string[];
-}
-
-export interface AuthResponse {
-  token: string;
-  username: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  role: string;
-  expiresAt: string;
-}
-
-export interface User {
-  id: string;
-  username: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  role: string;
-  dateOfBirth?: string;
-}
+// Re-export types from shared package for backward compatibility
+export type LoginRequest = SharedLoginRequest;
+export type RegisterRequest = SharedRegisterRequest;
+export type AuthResponse = SharedAuthResponse;
+export type User = SharedUser;
 
 class AuthService {
   async login(credentials: LoginRequest): Promise<AuthResponse> {
     console.log('AuthService.login called with:', credentials);
-    const response = await api.post<AuthResponse>('/auth/login', credentials);
-    console.log('Login response:', response.data);
-    this.setAuthData(response.data);
-    return response.data;
+    try {
+      // Try using the new API client first
+      const apiClient = getApiClient();
+      const response = await apiClient.login(credentials);
+      this.setAuthData(response);
+      return response;
+    } catch (error) {
+      // Fallback to old method if API client not initialized
+      const response = await api.post<AuthResponse>('/auth/login', credentials);
+      console.log('Login response:', response.data);
+      this.setAuthData(response.data);
+      return response.data;
+    }
   }
 
   async register(data: RegisterRequest): Promise<AuthResponse> {
-    const response = await api.post<AuthResponse>('/auth/register', data);
-    this.setAuthData(response.data);
-    return response.data;
+    try {
+      const apiClient = getApiClient();
+      const response = await apiClient.register(data);
+      this.setAuthData(response);
+      return response;
+    } catch (error) {
+      // Fallback to old method
+      const response = await api.post<AuthResponse>('/auth/register', data);
+      this.setAuthData(response.data);
+      return response.data;
+    }
   }
 
   async logout(): Promise<void> {
@@ -65,32 +49,75 @@ class AuthService {
   }
 
   async getCurrentUser(): Promise<User> {
-    const response = await api.get('/profile');
-    // The profile endpoint returns UserProfileDto which has all the fields we need
-    const profileData = response.data;
-    const user: User = {
-      id: profileData.id,
-      username: profileData.username,
-      email: profileData.email,
-      firstName: profileData.firstName,
-      lastName: profileData.lastName,
-      role: this.getUserRole() || 'Member',
-      dateOfBirth: profileData.dateOfBirth
-    };
-    // Update stored user with full data including ID
-    this.updateStoredUser(user);
-    return user;
+    try {
+      const apiClient = getApiClient();
+      const profileData = await apiClient.getProfile();
+      console.log('Profile data from API:', profileData);
+      const user: User = {
+        id: profileData.id,
+        username: profileData.username,
+        email: profileData.email,
+        firstName: profileData.firstName,
+        lastName: profileData.lastName,
+        role: profileData.role as 'Admin' | 'Member',
+        dateOfBirth: profileData.dateOfBirth,
+        phone: profileData.phone,
+        address: profileData.address,
+        city: profileData.city,
+        state: profileData.state,
+        zipCode: profileData.zipCode,
+        country: profileData.country,
+        isActive: profileData.isActive,
+        emailVerified: profileData.emailVerified,
+        memberSince: profileData.memberSince,
+        lastLoginAt: profileData.lastLoginAt,
+        createdAt: profileData.createdAt,
+        updatedAt: profileData.updatedAt,
+        dietaryRestrictions: profileData.dietaryRestrictions
+      };
+      console.log('User object to be stored:', user);
+      // Update stored user with full data including ID
+      this.updateStoredUser(user);
+      return user;
+    } catch (error) {
+      // Fallback to old method
+      const response = await api.get('/profile');
+      const profileData = response.data;
+      const user: User = {
+        id: profileData.id,
+        username: profileData.username,
+        email: profileData.email,
+        firstName: profileData.firstName,
+        lastName: profileData.lastName,
+        role: this.getUserRole() as 'Admin' | 'Member' || 'Member',
+        dateOfBirth: profileData.dateOfBirth,
+        isActive: true,
+        createdAt: profileData.createdAt
+      };
+      this.updateStoredUser(user);
+      return user;
+    }
   }
 
-  isAuthenticated(): boolean {
+  getToken(): string | null {
     const token = localStorage.getItem('authToken');
     const expiresAt = localStorage.getItem('authExpiresAt');
     
     if (!token || !expiresAt) {
-      return false;
+      return null;
     }
 
-    return new Date(expiresAt) > new Date();
+    // Check if token is expired
+    if (new Date(expiresAt) <= new Date()) {
+      this.clearAuthData();
+      return null;
+    }
+
+    return token;
+  }
+
+  isAuthenticated(): boolean {
+    return this.getToken() !== null;
   }
 
   getStoredUser(): User | null {
