@@ -85,8 +85,8 @@ function ActivityTimeline({ userId, showFilters = false, limit = 20 }: ActivityT
 
   const filteredActivities = activities.filter(activity =>
     searchTerm === '' || 
-    activity.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    activity.activityType.toLowerCase().includes(searchTerm.toLowerCase())
+    (activity.description?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
+    (activity.activityType?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)
   );
 
   const parseMetadata = (metadata?: string) => {
@@ -177,14 +177,14 @@ function ActivityTimeline({ userId, showFilters = false, limit = 20 }: ActivityT
             <div key={activity.id} className="timeline-item">
               <div 
                 className="timeline-marker"
-                style={{ backgroundColor: activityColors[activity.activityCategory] || '#6B7280' }}
+                style={{ backgroundColor: activity.activityCategory ? activityColors[activity.activityCategory] : '#6B7280' }}
               >
-                {activityIcons[activity.activityCategory] || '📝'}
+                {activity.activityCategory ? activityIcons[activity.activityCategory] : '📝'}
               </div>
               <div className="timeline-content">
                 <div className="timeline-header">
                   <strong className="activity-description">{activity.description}</strong>
-                  <span className="timeline-date">{formatDate(activity.createdAt)}</span>
+                  <span className="timeline-date">{activity.createdAt ? formatDate(activity.createdAt) : activity.timestamp ? formatDate(activity.timestamp) : ''}</span>
                 </div>
                 <div className="timeline-meta">
                   <span className="activity-type">{activity.activityType}</span>

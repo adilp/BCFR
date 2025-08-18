@@ -12,8 +12,8 @@ import {
 } from '@heroicons/react/24/outline';
 import './UserManagement.css';
 
-interface UserWithSubscription extends Omit<User, 'role'> {
-  role: string; // Override to allow any string, not just 'Admin' | 'Member'
+// Use the same interface as UserDetailsDrawer for consistency
+interface UserWithSubscription extends User {
   membershipTier?: string;
   subscriptionStatus?: string;
   joinDate?: string;

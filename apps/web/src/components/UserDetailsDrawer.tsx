@@ -34,7 +34,7 @@ function UserDetailsDrawer({ user, onClose, onSave }: UserDetailsDrawerProps) {
     { id: 'activity', label: 'Activity' }
   ];
 
-  const handleInputChange = (field: keyof User, value: any) => {
+  const handleInputChange = (field: keyof UserWithSubscription, value: any) => {
     setEditedUser(prev => ({ ...prev, [field]: value }));
   };
 
