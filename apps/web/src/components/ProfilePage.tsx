@@ -4,7 +4,7 @@ import { useNavigate } from '@tanstack/react-router'
 import Navigation from './Navigation'
 import './ProfilePage.css'
 import { getApiClient } from '@memberorg/api-client'
-import { formatDateForDisplay, type Subscription, type UpdateUserProfile } from '@memberorg/shared'
+import { formatDateForDisplay, formatCurrency, type Subscription, type UpdateUserProfile } from '@memberorg/shared'
 
 
 
@@ -183,12 +183,6 @@ const ProfilePage = () => {
     return formatDateForDisplay(dateString, { format: 'long' })
   }
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount)
-  }
 
   return (
     <div className="profile-page">

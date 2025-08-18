@@ -3,7 +3,7 @@ import './MembershipPage.css'
 import Navigation from './Navigation'
 import { useAuth } from '../contexts/AuthContext'
 import CheckoutForm from './CheckoutForm'
-import { calculateAge, formatForDateInput } from '@memberorg/shared'
+import { calculateAge, formatForDateInput, validateEmail, validatePhone, validateZipCode, isRequired, validatePassword } from '@memberorg/shared'
 
 const MembershipPage = () => {
   const { register } = useAuth()
@@ -86,9 +86,44 @@ const MembershipPage = () => {
     e.preventDefault()
     setError('')
 
+    // Validate required fields
+    if (!isRequired(formData.firstName)) {
+      setError('First name is required')
+      return
+    }
+    if (!isRequired(formData.lastName)) {
+      setError('Last name is required')
+      return
+    }
+    if (!isRequired(formData.email) || !validateEmail(formData.email)) {
+      setError('Valid email is required')
+      return
+    }
+    if (!isRequired(formData.username)) {
+      setError('Username is required')
+      return
+    }
+    
+    // Validate password strength
+    const passwordValidation = validatePassword(formData.password)
+    if (!passwordValidation.isValid) {
+      setError(passwordValidation.errors[0])
+      return
+    }
+
     // Validate passwords match
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match')
+      return
+    }
+
+    // Validate optional fields if provided
+    if (formData.phone && !validatePhone(formData.phone)) {
+      setError('Please enter a valid phone number')
+      return
+    }
+    if (formData.zipCode && !validateZipCode(formData.zipCode)) {
+      setError('Please enter a valid ZIP code')
       return
     }
 

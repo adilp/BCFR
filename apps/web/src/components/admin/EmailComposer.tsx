@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { getApiClient } from '@memberorg/api-client';
 import type { EmailRequest } from '@memberorg/shared';
+import { validateEmail } from '@memberorg/shared';
 import './EmailComposer.css';
 
 interface EmailComposerProps {
@@ -52,10 +53,6 @@ const EmailComposer: React.FC<EmailComposerProps> = ({ className = '' }) => {
       .filter(email => email.length > 0);
   };
 
-  const validateEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
 
   const handleSendEmail = async () => {
     const toEmailList = parseEmails(toEmails);

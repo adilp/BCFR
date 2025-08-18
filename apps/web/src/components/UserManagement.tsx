@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import UserDetailsDrawer from './UserDetailsDrawer';
 import { getApiClient } from '@memberorg/api-client';
 import type { User } from '@memberorg/shared';
+import { formatAddress } from '@memberorg/shared';
 import { 
   MagnifyingGlassIcon,
   ChevronRightIcon,
@@ -302,9 +303,9 @@ function UserManagement() {
                               <span className="detail-value">{user.address || 'Not provided'}</span>
                             </div>
                             <div className="detail-item">
-                              <span className="detail-label">City, State:</span>
+                              <span className="detail-label">Location:</span>
                               <span className="detail-value">
-                                {user.city || '-'}, {user.state || '-'} {user.zipCode || ''}
+                                {formatAddress(undefined, user.city, user.state, user.zipCode) || '-'}
                               </span>
                             </div>
                             <div className="detail-item">

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import api from '../services/api';
+import { getApiClient } from '@memberorg/api-client';
 import { formatRelativeTime } from '@memberorg/shared';
 import type { Activity } from '@memberorg/shared';
 import './ActivityTimeline.css';
@@ -65,16 +65,18 @@ function ActivityTimeline({ userId, showFilters = false, limit = 20 }: ActivityT
       setLoading(true);
       setError(null);
 
-      let endpoint = userId 
-        ? `/activitylog/user/${userId}?take=${limit}`
-        : `/activitylog/my-activities?take=${limit}`;
+      const apiClient = getApiClient();
+      const params = {
+        take: limit,
+        ...(selectedCategory && { activityCategory: selectedCategory })
+      };
 
-      if (selectedCategory) {
-        endpoint += `&activityCategory=${selectedCategory}`;
-      }
-
-      const response = await api.get(endpoint);
-      setActivities(response.data);
+      const data = userId 
+        ? await apiClient.getUserActivities(userId, params)
+        : await apiClient.getMyActivities(params);
+      
+      // Cast to ActivityLog to include the extended fields
+      setActivities(data as ActivityLog[]);
     } catch (err) {
       console.error('Failed to fetch activities:', err);
       setError('Failed to load activity history');

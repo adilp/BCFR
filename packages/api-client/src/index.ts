@@ -252,12 +252,20 @@ export class ApiClient {
   }
 
   // Activity log endpoints
-  async getUserActivities(userId: string): Promise<Activity[]> {
-    return this.request<Activity[]>(`/activitylog/user/${userId}`);
+  async getUserActivities(userId: string, params?: { take?: number; activityCategory?: string }): Promise<Activity[]> {
+    const queryParams = new URLSearchParams();
+    if (params?.take) queryParams.append('take', params.take.toString());
+    if (params?.activityCategory) queryParams.append('activityCategory', params.activityCategory);
+    const query = queryParams.toString();
+    return this.request<Activity[]>(`/activitylog/user/${userId}${query ? `?${query}` : ''}`);
   }
 
-  async getMyActivities(): Promise<Activity[]> {
-    return this.request<Activity[]>('/activitylog/my-activities');
+  async getMyActivities(params?: { take?: number; activityCategory?: string }): Promise<Activity[]> {
+    const queryParams = new URLSearchParams();
+    if (params?.take) queryParams.append('take', params.take.toString());
+    if (params?.activityCategory) queryParams.append('activityCategory', params.activityCategory);
+    const query = queryParams.toString();
+    return this.request<Activity[]>(`/activitylog/my-activities${query ? `?${query}` : ''}`);
   }
 
   async getRecentActivities(): Promise<Activity[]> {
