@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
 import { formatForDateInput, addDays } from '@memberorg/shared';
+import Drawer from './shared/Drawer';
+import { FormSection, FormGroup, FormGrid } from './shared/FormSection';
 import './EventDetailsDrawer.css';
 
 interface Event {
@@ -116,201 +117,173 @@ function EventDetailsDrawer({ event, isNew = false, onClose, onSave }: EventDeta
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = () => {
     if (validateForm()) {
       onSave(formData);
     }
   };
 
+  const drawerFooter = (
+    <>
+      <button type="button" className="btn btn-secondary" onClick={onClose}>
+        Cancel
+      </button>
+      <button type="button" className="btn btn-primary" onClick={handleSubmit}>
+        {isNew ? 'Create Event' : 'Save Changes'}
+      </button>
+    </>
+  );
+
   return (
-    <div className="event-drawer-overlay" onClick={onClose}>
-      <div className="event-drawer-container" onClick={e => e.stopPropagation()}>
-        <div className="drawer-header">
-          <h2>{isNew ? 'Create New Event' : 'Edit Event'}</h2>
-          <button className="close-btn" onClick={onClose}>
-            <XMarkIcon className="icon-md" />
-          </button>
-        </div>
+    <Drawer
+      isOpen={true}
+      onClose={onClose}
+      title={isNew ? 'Create New Event' : 'Edit Event'}
+      footer={drawerFooter}
+      size="lg"
+    >
+      <form className="drawer-content">
+        <FormSection title="Event Information">
+          <FormGroup label="Event Title" required error={errors.title}>
+            <input
+              type="text"
+              className="form-input"
+              value={formData.title}
+              onChange={(e) => handleChange('title', e.target.value)}
+              placeholder="e.g., The Future of NATO"
+            />
+          </FormGroup>
 
-        <form onSubmit={handleSubmit} className="drawer-content">
-          <div className="form-section">
-            <h3>Event Information</h3>
-            
-            <div className="form-group">
-              <label className="form-label required">Event Title</label>
+          <FormGroup label="Description" required error={errors.description}>
+            <textarea
+              className="form-textarea"
+              value={formData.description}
+              onChange={(e) => handleChange('description', e.target.value)}
+              rows={3}
+              placeholder="Brief description of the event..."
+            />
+          </FormGroup>
+
+          <FormGrid columns={3}>
+            <FormGroup label="Event Date" required error={errors.eventDate}>
               <input
-                type="text"
-                className={`form-input ${errors.title ? 'error' : ''}`}
-                value={formData.title}
-                onChange={(e) => handleChange('title', e.target.value)}
-                placeholder="e.g., The Future of NATO"
-              />
-              {errors.title && <span className="error-message">{errors.title}</span>}
-            </div>
-
-            <div className="form-group">
-              <label className="form-label required">Description</label>
-              <textarea
-                className={`form-textarea ${errors.description ? 'error' : ''}`}
-                value={formData.description}
-                onChange={(e) => handleChange('description', e.target.value)}
-                rows={3}
-                placeholder="Brief description of the event..."
-              />
-              {errors.description && <span className="error-message">{errors.description}</span>}
-            </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label required">Event Date</label>
-                <input
-                  type="date"
-                  className={`form-input ${errors.eventDate ? 'error' : ''}`}
-                  value={formData.eventDate}
-                  onChange={(e) => handleChange('eventDate', e.target.value)}
-                />
-                {errors.eventDate && <span className="error-message">{errors.eventDate}</span>}
-              </div>
-
-              <div className="form-group">
-                <label className="form-label required">Start Time</label>
-                <input
-                  type="time"
-                  className={`form-input ${errors.eventTime ? 'error' : ''}`}
-                  value={formData.eventTime}
-                  onChange={(e) => handleChange('eventTime', e.target.value)}
-                />
-                {errors.eventTime && <span className="error-message">{errors.eventTime}</span>}
-              </div>
-
-              <div className="form-group">
-                <label className="form-label required">End Time</label>
-                <input
-                  type="time"
-                  className={`form-input ${errors.endTime ? 'error' : ''}`}
-                  value={formData.endTime}
-                  onChange={(e) => handleChange('endTime', e.target.value)}
-                />
-                {errors.endTime && <span className="error-message">{errors.endTime}</span>}
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label required">Location</label>
-              <input
-                type="text"
-                className={`form-input ${errors.location ? 'error' : ''}`}
-                value={formData.location}
-                onChange={(e) => handleChange('location', e.target.value)}
-                placeholder="e.g., The Club Birmingham, Downtown"
-              />
-              {errors.location && <span className="error-message">{errors.location}</span>}
-            </div>
-          </div>
-
-          <div className="form-section">
-            <h3>Speaker Information</h3>
-            
-            <div className="form-group">
-              <label className="form-label required">Speaker Name</label>
-              <input
-                type="text"
-                className={`form-input ${errors.speaker ? 'error' : ''}`}
-                value={formData.speaker}
-                onChange={(e) => handleChange('speaker', e.target.value)}
-                placeholder="e.g., Ambassador Jane Smith"
-              />
-              {errors.speaker && <span className="error-message">{errors.speaker}</span>}
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Speaker Title</label>
-              <input
-                type="text"
+                type="date"
                 className="form-input"
-                value={formData.speakerTitle || ''}
-                onChange={(e) => handleChange('speakerTitle', e.target.value)}
-                placeholder="e.g., Former US Ambassador to NATO"
+                value={formData.eventDate}
+                onChange={(e) => handleChange('eventDate', e.target.value)}
               />
-            </div>
+            </FormGroup>
 
-            <div className="form-group">
-              <label className="form-label">Speaker Bio</label>
-              <textarea
-                className="form-textarea"
-                value={formData.speakerBio || ''}
-                onChange={(e) => handleChange('speakerBio', e.target.value)}
-                rows={3}
-                placeholder="Brief biography of the speaker..."
+            <FormGroup label="Start Time" required error={errors.eventTime}>
+              <input
+                type="time"
+                className="form-input"
+                value={formData.eventTime}
+                onChange={(e) => handleChange('eventTime', e.target.value)}
               />
-            </div>
-          </div>
+            </FormGroup>
 
-          <div className="form-section">
-            <h3>RSVP Settings</h3>
-            
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label required">RSVP Deadline</label>
-                <input
-                  type="date"
-                  className={`form-input ${errors.rsvpDeadline ? 'error' : ''}`}
-                  value={formData.rsvpDeadline}
-                  onChange={(e) => handleChange('rsvpDeadline', e.target.value)}
-                />
-                {errors.rsvpDeadline && <span className="error-message">{errors.rsvpDeadline}</span>}
-              </div>
+            <FormGroup label="End Time" required error={errors.endTime}>
+              <input
+                type="time"
+                className="form-input"
+                value={formData.endTime}
+                onChange={(e) => handleChange('endTime', e.target.value)}
+              />
+            </FormGroup>
+          </FormGrid>
 
-              <div className="form-group">
-                <label className="form-label">Max Attendees</label>
-                <input
-                  type="number"
-                  className="form-input"
-                  value={formData.maxAttendees || ''}
-                  onChange={(e) => handleChange('maxAttendees', e.target.value ? parseInt(e.target.value) : undefined)}
-                  placeholder="Leave empty for unlimited"
-                  min="1"
-                />
-              </div>
-            </div>
+          <FormGroup label="Location" required error={errors.location}>
+            <input
+              type="text"
+              className="form-input"
+              value={formData.location}
+              onChange={(e) => handleChange('location', e.target.value)}
+              placeholder="e.g., The Club Birmingham, Downtown"
+            />
+          </FormGroup>
+        </FormSection>
 
-            <div className="form-group">
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={formData.allowPlusOne}
-                  onChange={(e) => handleChange('allowPlusOne', e.target.checked)}
-                />
-                <span>Allow attendees to bring a plus one</span>
-              </label>
-            </div>
+        <FormSection title="Speaker Information">
+          <FormGroup label="Speaker Name" required error={errors.speaker}>
+            <input
+              type="text"
+              className="form-input"
+              value={formData.speaker}
+              onChange={(e) => handleChange('speaker', e.target.value)}
+              placeholder="e.g., Ambassador Jane Smith"
+            />
+          </FormGroup>
 
-            <div className="form-group">
-              <label className="form-label">Event Status</label>
-              <select
-                className="form-select"
-                value={formData.status}
-                onChange={(e) => handleChange('status', e.target.value as Event['status'])}
-              >
-                <option value="draft">Draft</option>
-                <option value="published">Published</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
-            </div>
-          </div>
+          <FormGroup label="Speaker Title">
+            <input
+              type="text"
+              className="form-input"
+              value={formData.speakerTitle || ''}
+              onChange={(e) => handleChange('speakerTitle', e.target.value)}
+              placeholder="e.g., Former US Ambassador to NATO"
+            />
+          </FormGroup>
 
-          <div className="drawer-footer">
-            <button type="button" className="btn btn-secondary" onClick={onClose}>
-              Cancel
-            </button>
-            <button type="submit" className="btn btn-primary">
-              {isNew ? 'Create Event' : 'Save Changes'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+          <FormGroup label="Speaker Bio">
+            <textarea
+              className="form-textarea"
+              value={formData.speakerBio || ''}
+              onChange={(e) => handleChange('speakerBio', e.target.value)}
+              rows={3}
+              placeholder="Brief biography of the speaker..."
+            />
+          </FormGroup>
+        </FormSection>
+
+        <FormSection title="RSVP Settings">
+          <FormGrid columns={2}>
+            <FormGroup label="RSVP Deadline" required error={errors.rsvpDeadline}>
+              <input
+                type="date"
+                className="form-input"
+                value={formData.rsvpDeadline}
+                onChange={(e) => handleChange('rsvpDeadline', e.target.value)}
+              />
+            </FormGroup>
+
+            <FormGroup label="Max Attendees">
+              <input
+                type="number"
+                className="form-input"
+                value={formData.maxAttendees || ''}
+                onChange={(e) => handleChange('maxAttendees', e.target.value ? parseInt(e.target.value) : undefined)}
+                placeholder="Leave empty for unlimited"
+                min="1"
+              />
+            </FormGroup>
+          </FormGrid>
+
+          <FormGroup label="">
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={formData.allowPlusOne}
+                onChange={(e) => handleChange('allowPlusOne', e.target.checked)}
+              />
+              <span>Allow attendees to bring a plus one</span>
+            </label>
+          </FormGroup>
+
+          <FormGroup label="Event Status">
+            <select
+              className="form-select"
+              value={formData.status}
+              onChange={(e) => handleChange('status', e.target.value as Event['status'])}
+            >
+              <option value="draft">Draft</option>
+              <option value="published">Published</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </FormGroup>
+        </FormSection>
+      </form>
+    </Drawer>
   );
 }
 

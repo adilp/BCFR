@@ -1,5 +1,9 @@
 import { useState } from 'react';
 import ActivityTimeline from './ActivityTimeline';
+import Drawer from './shared/Drawer';
+import TabNavigation from './shared/TabNavigation';
+import { FormSection, FormGroup, FormGrid } from './shared/FormSection';
+import Badge, { getStatusBadgeVariant } from './shared/Badge';
 import './UserDetailsDrawer.css';
 
 interface User {
@@ -35,8 +39,14 @@ interface UserDetailsDrawerProps {
 
 function UserDetailsDrawer({ user, onClose, onSave }: UserDetailsDrawerProps) {
   const [editedUser, setEditedUser] = useState<User>({ ...user });
-  const [activeTab, setActiveTab] = useState<'personal' | 'subscription' | 'activity'>('personal');
+  const [activeTab, setActiveTab] = useState('personal');
   const [newRestriction, setNewRestriction] = useState('');
+
+  const tabs = [
+    { id: 'personal', label: 'Personal Info' },
+    { id: 'subscription', label: 'Subscription' },
+    { id: 'activity', label: 'Activity' }
+  ];
 
   const handleInputChange = (field: keyof User, value: any) => {
     setEditedUser(prev => ({ ...prev, [field]: value }));
@@ -67,172 +77,151 @@ function UserDetailsDrawer({ user, onClose, onSave }: UserDetailsDrawerProps) {
     }));
   };
 
-  return (
+  const drawerFooter = (
     <>
-      <div className="drawer-overlay active" onClick={onClose}></div>
-      <div className="user-details-drawer open">
-        <div className="drawer-header">
-          <h2 className="drawer-title">Edit User Details</h2>
-          <button className="drawer-close" onClick={onClose}>✕</button>
-        </div>
+      <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+      <button className="btn btn-primary" onClick={handleSave}>Save Changes</button>
+    </>
+  );
 
-        <div className="drawer-user-header">
-          <div className="user-avatar-large">
-            {editedUser.firstName[0]}{editedUser.lastName[0]}
+  return (
+    <Drawer
+      isOpen={true}
+      onClose={onClose}
+      title="Edit User Details"
+      footer={drawerFooter}
+      size="lg"
+    >
+
+      <div className="drawer-user-header">
+        <div className="user-avatar-large">
+          {editedUser.firstName[0]}{editedUser.lastName[0]}
+        </div>
+        <div className="user-header-info">
+          <h3>{editedUser.firstName} {editedUser.lastName}</h3>
+          <p className="user-username">@{editedUser.username}</p>
+          <div className="user-badges">
+            <Badge variant={getStatusBadgeVariant(editedUser.role)}>
+              {editedUser.role}
+            </Badge>
+            {editedUser.subscriptionStatus && (
+              <Badge variant={getStatusBadgeVariant(editedUser.subscriptionStatus)}>
+                {editedUser.subscriptionStatus}
+              </Badge>
+            )}
           </div>
-          <div className="user-header-info">
-            <h3>{editedUser.firstName} {editedUser.lastName}</h3>
-            <p className="user-username">@{editedUser.username}</p>
-            <div className="user-badges">
-              <span className={`tag tag-${editedUser.role === 'Admin' ? 'purple' : 'blue'}`}>
-                {editedUser.role}
-              </span>
-              {editedUser.subscriptionStatus && (
-                <span className={`tag tag-${editedUser.subscriptionStatus === 'active' ? 'green' : 'red'}`}>
-                  {editedUser.subscriptionStatus}
-                </span>
-              )}
-            </div>
-          </div>
         </div>
+      </div>
 
-        <div className="drawer-tabs">
-          <button 
-            className={`tab ${activeTab === 'personal' ? 'active' : ''}`}
-            onClick={() => setActiveTab('personal')}
-          >
-            Personal Info
-          </button>
-          <button 
-            className={`tab ${activeTab === 'subscription' ? 'active' : ''}`}
-            onClick={() => setActiveTab('subscription')}
-          >
-            Subscription
-          </button>
-          <button 
-            className={`tab ${activeTab === 'activity' ? 'active' : ''}`}
-            onClick={() => setActiveTab('activity')}
-          >
-            Activity
-          </button>
-        </div>
+      <TabNavigation
+        tabs={tabs}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        variant="default"
+      />
 
-        <div className="drawer-content">
-          {activeTab === 'personal' && (
-            <div className="tab-content">
-              <div className="form-section">
-                <h4 className="section-title">Basic Information</h4>
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label className="form-label">First Name</label>
-                    <input
-                      type="text"
-                      className="form-input"
-                      value={editedUser.firstName}
-                      onChange={(e) => handleInputChange('firstName', e.target.value)}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Last Name</label>
-                    <input
-                      type="text"
-                      className="form-input"
-                      value={editedUser.lastName}
-                      onChange={(e) => handleInputChange('lastName', e.target.value)}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Username</label>
-                    <input
-                      type="text"
-                      className="form-input"
-                      value={editedUser.username}
-                      onChange={(e) => handleInputChange('username', e.target.value)}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Email</label>
-                    <input
-                      type="email"
-                      className="form-input"
-                      value={editedUser.email}
-                      onChange={(e) => handleInputChange('email', e.target.value)}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Phone</label>
-                    <input
-                      type="tel"
-                      className="form-input"
-                      value={editedUser.phone || ''}
-                      onChange={(e) => handleInputChange('phone', e.target.value)}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Date of Birth</label>
-                    <input
-                      type="date"
-                      className="form-input"
-                      value={editedUser.dateOfBirth || ''}
-                      onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
-                    />
-                  </div>
-                </div>
-              </div>
+      <div className="drawer-content">
+        {activeTab === 'personal' && (
+          <div className="tab-content">
+            <FormSection title="Basic Information">
+              <FormGrid columns={2}>
+                <FormGroup label="First Name">
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={editedUser.firstName}
+                    onChange={(e) => handleInputChange('firstName', e.target.value)}
+                  />
+                </FormGroup>
+                <FormGroup label="Last Name">
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={editedUser.lastName}
+                    onChange={(e) => handleInputChange('lastName', e.target.value)}
+                  />
+                </FormGroup>
+                <FormGroup label="Username">
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={editedUser.username}
+                    onChange={(e) => handleInputChange('username', e.target.value)}
+                  />
+                </FormGroup>
+                <FormGroup label="Email">
+                  <input
+                    type="email"
+                    className="form-input"
+                    value={editedUser.email}
+                    onChange={(e) => handleInputChange('email', e.target.value)}
+                  />
+                </FormGroup>
+                <FormGroup label="Phone">
+                  <input
+                    type="tel"
+                    className="form-input"
+                    value={editedUser.phone || ''}
+                    onChange={(e) => handleInputChange('phone', e.target.value)}
+                  />
+                </FormGroup>
+                <FormGroup label="Date of Birth">
+                  <input
+                    type="date"
+                    className="form-input"
+                    value={editedUser.dateOfBirth || ''}
+                    onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
+                  />
+                </FormGroup>
+              </FormGrid>
+            </FormSection>
 
-              <div className="form-section">
-                <h4 className="section-title">Address</h4>
-                <div className="form-grid">
-                  <div className="form-group full-width">
-                    <label className="form-label">Street Address</label>
-                    <input
-                      type="text"
-                      className="form-input"
-                      value={editedUser.address || ''}
-                      onChange={(e) => handleInputChange('address', e.target.value)}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">City</label>
-                    <input
-                      type="text"
-                      className="form-input"
-                      value={editedUser.city || ''}
-                      onChange={(e) => handleInputChange('city', e.target.value)}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">State</label>
-                    <input
-                      type="text"
-                      className="form-input"
-                      value={editedUser.state || ''}
-                      onChange={(e) => handleInputChange('state', e.target.value)}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">ZIP Code</label>
-                    <input
-                      type="text"
-                      className="form-input"
-                      value={editedUser.zipCode || ''}
-                      onChange={(e) => handleInputChange('zipCode', e.target.value)}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Country</label>
-                    <input
-                      type="text"
-                      className="form-input"
-                      value={editedUser.country || ''}
-                      onChange={(e) => handleInputChange('country', e.target.value)}
-                    />
-                  </div>
-                </div>
-              </div>
+            <FormSection title="Address">
+              <FormGrid columns={2}>
+                <FormGroup label="Street Address" fullWidth>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={editedUser.address || ''}
+                    onChange={(e) => handleInputChange('address', e.target.value)}
+                  />
+                </FormGroup>
+                <FormGroup label="City">
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={editedUser.city || ''}
+                    onChange={(e) => handleInputChange('city', e.target.value)}
+                  />
+                </FormGroup>
+                <FormGroup label="State">
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={editedUser.state || ''}
+                    onChange={(e) => handleInputChange('state', e.target.value)}
+                  />
+                </FormGroup>
+                <FormGroup label="ZIP Code">
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={editedUser.zipCode || ''}
+                    onChange={(e) => handleInputChange('zipCode', e.target.value)}
+                  />
+                </FormGroup>
+                <FormGroup label="Country">
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={editedUser.country || ''}
+                    onChange={(e) => handleInputChange('country', e.target.value)}
+                  />
+                </FormGroup>
+              </FormGrid>
+            </FormSection>
 
-              <div className="form-section">
-                <h4 className="section-title">Dietary Restrictions</h4>
+            <FormSection title="Dietary Restrictions">
                 <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
                   <input
                     type="text"
@@ -294,139 +283,124 @@ function UserDetailsDrawer({ user, onClose, onSave }: UserDetailsDrawerProps) {
                     ))}
                   </div>
                 )}
+            </FormSection>
+
+            <FormSection title="Account Settings">
+              <FormGrid columns={2}>
+                <FormGroup label="Role">
+                  <select
+                    className="form-select"
+                    value={editedUser.role}
+                    onChange={(e) => handleInputChange('role', e.target.value)}
+                  >
+                    <option value="Member">Member</option>
+                    <option value="Admin">Admin</option>
+                  </select>
+                </FormGroup>
+                <FormGroup label="Account Status">
+                  <select
+                    className="form-select"
+                    value={editedUser.isActive ? 'active' : 'inactive'}
+                    onChange={(e) => handleInputChange('isActive', e.target.value === 'active')}
+                  >
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </FormGroup>
+              </FormGrid>
+            </FormSection>
+          </div>
+        )}
+
+        {activeTab === 'subscription' && (
+          <div className="tab-content">
+            <FormSection title="Membership Details">
+              <FormGrid columns={2}>
+                <FormGroup label="Membership Tier">
+                  <select
+                    className="form-select"
+                    value={editedUser.membershipTier || ''}
+                    onChange={(e) => handleInputChange('membershipTier', e.target.value)}
+                  >
+                    <option value="">None</option>
+                    <option value="Individual">Individual ($125/year)</option>
+                    <option value="Family">Family ($200/year)</option>
+                    <option value="Student">Student ($25/year)</option>
+                  </select>
+                </FormGroup>
+                <FormGroup label="Subscription Status">
+                  <select
+                    className="form-select"
+                    value={editedUser.subscriptionStatus || ''}
+                    onChange={(e) => handleInputChange('subscriptionStatus', e.target.value)}
+                  >
+                    <option value="">None</option>
+                    <option value="active">Active</option>
+                    <option value="canceled">Canceled</option>
+                    <option value="past_due">Past Due</option>
+                    <option value="trialing">Trialing</option>
+                  </select>
+                </FormGroup>
+                <FormGroup label="Stripe Customer ID">
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={editedUser.stripeCustomerId || ''}
+                    onChange={(e) => handleInputChange('stripeCustomerId', e.target.value)}
+                    placeholder="cus_..."
+                  />
+                </FormGroup>
+                <FormGroup label="Amount">
+                  <input
+                    type="number"
+                    className="form-input"
+                    value={editedUser.amount || ''}
+                    onChange={(e) => handleInputChange('amount', parseFloat(e.target.value))}
+                    step="0.01"
+                    min="0"
+                  />
+                </FormGroup>
+                <FormGroup label="Next Billing Date">
+                  <input
+                    type="date"
+                    className="form-input"
+                    value={editedUser.nextBillingDate || ''}
+                    onChange={(e) => handleInputChange('nextBillingDate', e.target.value)}
+                  />
+                </FormGroup>
+              </FormGrid>
+            </FormSection>
+
+            {editedUser.subscriptionStatus === 'active' && (
+              <div className="subscription-actions">
+                <button className="btn btn-secondary">Cancel Subscription</button>
+                <button className="btn btn-secondary">Send Invoice</button>
               </div>
+            )}
+          </div>
+        )}
 
-              <div className="form-section">
-                <h4 className="section-title">Account Settings</h4>
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label className="form-label">Role</label>
-                    <select
-                      className="form-select"
-                      value={editedUser.role}
-                      onChange={(e) => handleInputChange('role', e.target.value)}
-                    >
-                      <option value="Member">Member</option>
-                      <option value="Admin">Admin</option>
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Account Status</label>
-                    <select
-                      className="form-select"
-                      value={editedUser.isActive ? 'active' : 'inactive'}
-                      onChange={(e) => handleInputChange('isActive', e.target.value === 'active')}
-                    >
-                      <option value="active">Active</option>
-                      <option value="inactive">Inactive</option>
-                    </select>
-                  </div>
-                </div>
+        {activeTab === 'activity' && (
+          <div className="tab-content">
+            <ActivityTimeline userId={editedUser.id} showFilters={true} limit={50} />
+
+            <FormSection title="Account Actions">
+              <div className="action-buttons">
+                <button className="btn btn-secondary">Reset Password</button>
+                <button className="btn btn-secondary">Send Welcome Email</button>
+                <button className="btn btn-secondary">Export User Data</button>
+                {editedUser.isActive ? (
+                  <button className="btn btn-danger">Deactivate Account</button>
+                ) : (
+                  <button className="btn btn-success">Reactivate Account</button>
+                )}
               </div>
-            </div>
-          )}
-
-          {activeTab === 'subscription' && (
-            <div className="tab-content">
-              <div className="form-section">
-                <h4 className="section-title">Membership Details</h4>
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label className="form-label">Membership Tier</label>
-                    <select
-                      className="form-select"
-                      value={editedUser.membershipTier || ''}
-                      onChange={(e) => handleInputChange('membershipTier', e.target.value)}
-                    >
-                      <option value="">None</option>
-                      <option value="Individual">Individual ($125/year)</option>
-                      <option value="Family">Family ($200/year)</option>
-                      <option value="Student">Student ($25/year)</option>
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Subscription Status</label>
-                    <select
-                      className="form-select"
-                      value={editedUser.subscriptionStatus || ''}
-                      onChange={(e) => handleInputChange('subscriptionStatus', e.target.value)}
-                    >
-                      <option value="">None</option>
-                      <option value="active">Active</option>
-                      <option value="canceled">Canceled</option>
-                      <option value="past_due">Past Due</option>
-                      <option value="trialing">Trialing</option>
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Stripe Customer ID</label>
-                    <input
-                      type="text"
-                      className="form-input"
-                      value={editedUser.stripeCustomerId || ''}
-                      onChange={(e) => handleInputChange('stripeCustomerId', e.target.value)}
-                      placeholder="cus_..."
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Amount</label>
-                    <input
-                      type="number"
-                      className="form-input"
-                      value={editedUser.amount || ''}
-                      onChange={(e) => handleInputChange('amount', parseFloat(e.target.value))}
-                      step="0.01"
-                      min="0"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Next Billing Date</label>
-                    <input
-                      type="date"
-                      className="form-input"
-                      value={editedUser.nextBillingDate || ''}
-                      onChange={(e) => handleInputChange('nextBillingDate', e.target.value)}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {editedUser.subscriptionStatus === 'active' && (
-                <div className="subscription-actions">
-                  <button className="btn btn-secondary">Cancel Subscription</button>
-                  <button className="btn btn-secondary">Send Invoice</button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeTab === 'activity' && (
-            <div className="tab-content">
-              <ActivityTimeline userId={editedUser.id} showFilters={true} limit={50} />
-
-              <div className="form-section">
-                <h4 className="section-title">Account Actions</h4>
-                <div className="action-buttons">
-                  <button className="btn btn-secondary">Reset Password</button>
-                  <button className="btn btn-secondary">Send Welcome Email</button>
-                  <button className="btn btn-secondary">Export User Data</button>
-                  {editedUser.isActive ? (
-                    <button className="btn btn-danger">Deactivate Account</button>
-                  ) : (
-                    <button className="btn btn-success">Reactivate Account</button>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="drawer-footer">
-          <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
-          <button className="btn btn-primary" onClick={handleSave}>Save Changes</button>
-        </div>
+            </FormSection>
+          </div>
+        )}
       </div>
-    </>
+
+    </Drawer>
   );
 }
 
