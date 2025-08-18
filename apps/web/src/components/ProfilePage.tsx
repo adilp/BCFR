@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import { useNavigate } from '@tanstack/react-router'
 import Navigation from './Navigation'
 import './ProfilePage.css'
 import { getApiClient } from '@memberorg/api-client'
@@ -9,6 +10,7 @@ import { formatDateForDisplay, type Subscription, type UpdateUserProfile } from 
 
 const ProfilePage = () => {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [isEditing, setIsEditing] = useState(false)
   const [activeTab, setActiveTab] = useState<'profile' | 'subscription'>('profile')
   const [subscription, setSubscription] = useState<Subscription | null>(null)

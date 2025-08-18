@@ -7,7 +7,7 @@ interface AdminProtectedRouteProps {
 }
 
 function AdminProtectedRoute({ children }: AdminProtectedRouteProps) {
-  const { isAuthenticated, isLoading, user, isAdmin } = useAuth();
+  const { isAuthenticated, isLoading, isAdmin } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
