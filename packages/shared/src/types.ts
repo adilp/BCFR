@@ -28,6 +28,15 @@ export interface UserProfile extends User {
   subscriptionStatus?: string;
 }
 
+// Admin view of users with subscription data
+export interface AdminUser extends User {
+  membershipTier?: string;
+  subscriptionStatus?: string;
+  stripeCustomerId?: string;
+  nextBillingDate?: string;
+  amount?: number;
+}
+
 export interface LoginRequest {
   username: string;
   password: string;

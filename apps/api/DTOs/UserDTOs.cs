@@ -66,4 +66,11 @@ public class UserAdminResponse
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
     public List<string>? DietaryRestrictions { get; set; }
+    
+    // Subscription fields
+    public string? MembershipTier { get; set; }
+    public string? SubscriptionStatus { get; set; }
+    public string? StripeCustomerId { get; set; }
+    public DateTime? NextBillingDate { get; set; }
+    public decimal? Amount { get; set; }
 }

@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import type { User } from '@memberorg/shared';
+import type { AdminUser } from '@memberorg/shared';
+import { formatDateForDisplay } from '@memberorg/shared';
+import { getApiClient } from '@memberorg/api-client';
 import ActivityTimeline from './ActivityTimeline';
 import Drawer from './shared/Drawer';
 import TabNavigation from './shared/TabNavigation';
@@ -7,26 +9,22 @@ import { FormSection, FormGroup, FormGrid } from './shared/FormSection';
 import Badge, { getStatusBadgeVariant } from './shared/Badge';
 import './UserDetailsDrawer.css';
 
-// Extend the shared User type with subscription fields
-interface UserWithSubscription extends User {
-  membershipTier?: string;
-  subscriptionStatus?: string;
-  stripeCustomerId?: string;
-  nextBillingDate?: string;
-  amount?: number;
-  dietaryRestrictions?: string[];
-}
-
 interface UserDetailsDrawerProps {
-  user: UserWithSubscription;
+  user: AdminUser;
   onClose: () => void;
-  onSave: (user: UserWithSubscription) => void;
+  onSave: (user: AdminUser) => void;
 }
 
 function UserDetailsDrawer({ user, onClose, onSave }: UserDetailsDrawerProps) {
-  const [editedUser, setEditedUser] = useState<UserWithSubscription>({ ...user });
+  const [editedUser, setEditedUser] = useState<AdminUser>({ ...user });
   const [activeTab, setActiveTab] = useState('personal');
   const [newRestriction, setNewRestriction] = useState('');
+  const [showCheckPayment, setShowCheckPayment] = useState(false);
+  const [checkPayment, setCheckPayment] = useState({
+    membershipTier: '',
+    amount: '',
+    startDate: new Date().toISOString().split('T')[0] // Default to today
+  });
 
   const tabs = [
     { id: 'personal', label: 'Personal Info' },
@@ -34,7 +32,7 @@ function UserDetailsDrawer({ user, onClose, onSave }: UserDetailsDrawerProps) {
     { id: 'activity', label: 'Activity' }
   ];
 
-  const handleInputChange = (field: keyof UserWithSubscription, value: any) => {
+  const handleInputChange = (field: keyof AdminUser, value: any) => {
     setEditedUser(prev => ({ ...prev, [field]: value }));
   };
 
@@ -61,6 +59,52 @@ function UserDetailsDrawer({ user, onClose, onSave }: UserDetailsDrawerProps) {
       ...prev,
       dietaryRestrictions: currentRestrictions.filter((_, i) => i !== index)
     }));
+  };
+
+  const handleRecordCheckPayment = async () => {
+    try {
+      const apiClient = getApiClient();
+      const updatedUser = await apiClient.recordCheckPayment(user.id, {
+        membershipTier: checkPayment.membershipTier,
+        amount: parseFloat(checkPayment.amount),
+        startDate: checkPayment.startDate
+      });
+      
+      // Update the edited user with the new subscription data
+      setEditedUser(updatedUser);
+      
+      // Reset the form and hide it
+      setShowCheckPayment(false);
+      setCheckPayment({
+        membershipTier: '',
+        amount: '',
+        startDate: new Date().toISOString().split('T')[0]
+      });
+      
+      // Notify parent component
+      onSave(updatedUser);
+      
+      alert('Check payment recorded successfully!');
+    } catch (err: any) {
+      console.error('Failed to record check payment:', err);
+      alert(err.message || 'Failed to record check payment');
+    }
+  };
+
+  // Auto-fill amount based on selected tier
+  const handleTierChange = (tier: string) => {
+    setCheckPayment(prev => {
+      const amounts: Record<string, string> = {
+        'over40': '300',
+        'under40': '125',
+        'student': '25'
+      };
+      return {
+        ...prev,
+        membershipTier: tier,
+        amount: amounts[tier] || prev.amount
+      };
+    });
   };
 
   const drawerFooter = (
@@ -300,67 +344,186 @@ function UserDetailsDrawer({ user, onClose, onSave }: UserDetailsDrawerProps) {
 
         {activeTab === 'subscription' && (
           <div className="tab-content">
-            <FormSection title="Membership Details">
-              <FormGrid columns={2}>
-                <FormGroup label="Membership Tier">
-                  <select
-                    className="form-select"
-                    value={editedUser.membershipTier || ''}
-                    onChange={(e) => handleInputChange('membershipTier', e.target.value)}
-                  >
-                    <option value="">None</option>
-                    <option value="Individual">Individual ($125/year)</option>
-                    <option value="Family">Family ($200/year)</option>
-                    <option value="Student">Student ($25/year)</option>
-                  </select>
-                </FormGroup>
-                <FormGroup label="Subscription Status">
-                  <select
-                    className="form-select"
-                    value={editedUser.subscriptionStatus || ''}
-                    onChange={(e) => handleInputChange('subscriptionStatus', e.target.value)}
-                  >
-                    <option value="">None</option>
-                    <option value="active">Active</option>
-                    <option value="canceled">Canceled</option>
-                    <option value="past_due">Past Due</option>
-                    <option value="trialing">Trialing</option>
-                  </select>
-                </FormGroup>
-                <FormGroup label="Stripe Customer ID">
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={editedUser.stripeCustomerId || ''}
-                    onChange={(e) => handleInputChange('stripeCustomerId', e.target.value)}
-                    placeholder="cus_..."
-                  />
-                </FormGroup>
-                <FormGroup label="Amount">
-                  <input
-                    type="number"
-                    className="form-input"
-                    value={editedUser.amount || ''}
-                    onChange={(e) => handleInputChange('amount', parseFloat(e.target.value))}
-                    step="0.01"
-                    min="0"
-                  />
-                </FormGroup>
-                <FormGroup label="Next Billing Date">
-                  <input
-                    type="date"
-                    className="form-input"
-                    value={editedUser.nextBillingDate || ''}
-                    onChange={(e) => handleInputChange('nextBillingDate', e.target.value)}
-                  />
-                </FormGroup>
-              </FormGrid>
-            </FormSection>
+            {/* Show payment method indicator if they have a subscription */}
+            {editedUser.stripeCustomerId && (
+              <div style={{ 
+                padding: '0.75rem', 
+                marginBottom: '1rem', 
+                backgroundColor: editedUser.stripeCustomerId.startsWith('CHECK_') ? '#e3f2fd' : '#f0f7ff',
+                borderRadius: '8px',
+                border: `1px solid ${editedUser.stripeCustomerId.startsWith('CHECK_') ? '#2196f3' : '#4263EB'}`
+              }}>
+                <strong>Payment Method: </strong>
+                {editedUser.stripeCustomerId.startsWith('CHECK_') ? (
+                  <span>✓ Check Payment (Manually Processed)</span>
+                ) : (
+                  <span>💳 Credit Card (Stripe)</span>
+                )}
+              </div>
+            )}
 
-            {editedUser.subscriptionStatus === 'active' && (
-              <div className="subscription-actions">
+            {/* Existing subscription details - only show if user has a subscription */}
+            {editedUser.subscriptionStatus ? (
+              <FormSection title="Current Membership">
+                <FormGrid columns={2}>
+                  <FormGroup label="Membership Tier">
+                    <select
+                      className="form-select"
+                      value={editedUser.membershipTier || ''}
+                      onChange={(e) => handleInputChange('membershipTier', e.target.value)}
+                      disabled={!editedUser.stripeCustomerId?.startsWith('CHECK_')}
+                    >
+                      <option value="">None</option>
+                      <option value="over40">Over 40 Members ($300/year)</option>
+                      <option value="under40">Under 40 Members ($125/year)</option>
+                      <option value="student">Student ($25/year)</option>
+                    </select>
+                  </FormGroup>
+                  <FormGroup label="Subscription Status">
+                    <select
+                      className="form-select"
+                      value={editedUser.subscriptionStatus || ''}
+                      onChange={(e) => handleInputChange('subscriptionStatus', e.target.value)}
+                    >
+                      <option value="">None</option>
+                      <option value="active">Active</option>
+                      <option value="canceled">Canceled</option>
+                      <option value="past_due">Past Due</option>
+                      <option value="trialing">Trialing</option>
+                    </select>
+                  </FormGroup>
+                  <FormGroup label="Customer ID">
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={editedUser.stripeCustomerId || ''}
+                      onChange={(e) => handleInputChange('stripeCustomerId', e.target.value)}
+                      placeholder="cus_... or CHECK_..."
+                      disabled
+                    />
+                  </FormGroup>
+                  <FormGroup label="Amount">
+                    <input
+                      type="number"
+                      className="form-input"
+                      value={editedUser.amount || ''}
+                      onChange={(e) => handleInputChange('amount', parseFloat(e.target.value))}
+                      step="0.01"
+                      min="0"
+                      disabled={!editedUser.stripeCustomerId?.startsWith('CHECK_')}
+                    />
+                  </FormGroup>
+                  <FormGroup label="Next Billing Date">
+                    <input
+                      type="date"
+                      className="form-input"
+                      value={editedUser.nextBillingDate ? editedUser.nextBillingDate.split('T')[0] : ''}
+                      onChange={(e) => handleInputChange('nextBillingDate', e.target.value)}
+                      disabled={!editedUser.stripeCustomerId?.startsWith('CHECK_')}
+                    />
+                  </FormGroup>
+                </FormGrid>
+              </FormSection>
+            ) : (
+              <div style={{ 
+                textAlign: 'center', 
+                padding: '2rem', 
+                backgroundColor: '#f9f9f9', 
+                borderRadius: '8px',
+                marginBottom: '1rem'
+              }}>
+                <p style={{ color: '#666', marginBottom: '1rem' }}>No active subscription</p>
+                {!showCheckPayment && (
+                  <button 
+                    className="btn btn-primary"
+                    onClick={() => setShowCheckPayment(true)}
+                  >
+                    Record Check Payment
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Check Payment Form */}
+            {showCheckPayment && (
+              <FormSection title="Record Check Payment">
+                <p style={{ marginBottom: '1rem', color: '#666' }}>
+                  Use this form to manually record a check payment after the check has been cashed.
+                </p>
+                <FormGrid columns={2}>
+                  <FormGroup label="Membership Tier" required>
+                    <select
+                      className="form-select"
+                      value={checkPayment.membershipTier}
+                      onChange={(e) => handleTierChange(e.target.value)}
+                    >
+                      <option value="">Select tier</option>
+                      <option value="over40">Over 40 Members ($300/year)</option>
+                      <option value="under40">Under 40 Members ($125/year)</option>
+                      <option value="student">Student ($25/year)</option>
+                    </select>
+                  </FormGroup>
+                  
+                  <FormGroup label="Amount Paid" required>
+                    <input
+                      type="number"
+                      className="form-input"
+                      value={checkPayment.amount}
+                      onChange={(e) => setCheckPayment({...checkPayment, amount: e.target.value})}
+                      placeholder="Enter amount"
+                      step="0.01"
+                      min="0"
+                    />
+                  </FormGroup>
+                  
+                  <FormGroup label="Start Date (Check Cashed)" required>
+                    <input
+                      type="date"
+                      className="form-input"
+                      value={checkPayment.startDate}
+                      onChange={(e) => setCheckPayment({...checkPayment, startDate: e.target.value})}
+                    />
+                  </FormGroup>
+                </FormGrid>
+                
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+                  <button 
+                    className="btn btn-primary"
+                    onClick={handleRecordCheckPayment}
+                    disabled={!checkPayment.membershipTier || !checkPayment.amount || !checkPayment.startDate}
+                  >
+                    Record Payment
+                  </button>
+                  <button 
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      setShowCheckPayment(false);
+                      setCheckPayment({
+                        membershipTier: '',
+                        amount: '',
+                        startDate: new Date().toISOString().split('T')[0]
+                      });
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </FormSection>
+            )}
+
+            {/* Action buttons for active subscriptions */}
+            {editedUser.subscriptionStatus === 'active' && !showCheckPayment && (
+              <div className="subscription-actions" style={{ marginTop: '1rem' }}>
                 <button className="btn btn-secondary">Cancel Subscription</button>
                 <button className="btn btn-secondary">Send Invoice</button>
+                {!editedUser.stripeCustomerId?.startsWith('CHECK_') && (
+                  <button 
+                    className="btn btn-primary"
+                    onClick={() => setShowCheckPayment(true)}
+                  >
+                    Convert to Check Payment
+                  </button>
+                )}
               </div>
             )}
           </div>

@@ -341,7 +341,7 @@ public class EventsController : ControllerBase
             .Include(r => r.User)
             .FirstOrDefaultAsync(r => r.EventId == id && r.UserId == userGuid);
 
-        string previousResponse = null;
+        string? previousResponse = null;
         bool isNewRsvp = false;
         
         if (existingRsvp != null)

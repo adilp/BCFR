@@ -1,6 +1,7 @@
 import type { 
   User,
   UserProfile,
+  AdminUser,
   LoginRequest,
   RegisterRequest,
   AuthResponse,
@@ -199,7 +200,7 @@ export class ApiClient {
   }
 
   // Admin endpoints
-  async getUsers(params?: UserQueryParams): Promise<{ users: User[]; totalCount: number }> {
+  async getUsers(params?: UserQueryParams): Promise<{ users: AdminUser[]; totalCount: number }> {
     const queryParams = new URLSearchParams();
     if (params?.page) queryParams.append('page', params.page.toString());
     if (params?.pageSize) queryParams.append('pageSize', params.pageSize.toString());
@@ -223,12 +224,12 @@ export class ApiClient {
     };
   }
 
-  async getUser(id: string): Promise<User> {
-    return this.request<User>(`/admin/users/${id}`);
+  async getUser(id: string): Promise<AdminUser> {
+    return this.request<AdminUser>(`/admin/users/${id}`);
   }
 
-  async updateUser(id: string, data: Partial<User>): Promise<void> {
-    return this.request<void>(`/admin/users/${id}`, {
+  async updateUser(id: string, data: Partial<User>): Promise<AdminUser> {
+    return this.request<AdminUser>(`/admin/users/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
@@ -244,6 +245,20 @@ export class ApiClient {
   async deleteUser(id: string): Promise<void> {
     return this.request<void>(`/admin/users/${id}`, {
       method: 'DELETE',
+    });
+  }
+
+  async recordCheckPayment(
+    userId: string, 
+    data: { 
+      membershipTier: string; 
+      amount: number; 
+      startDate: string; 
+    }
+  ): Promise<AdminUser> {
+    return this.request<AdminUser>(`/admin/users/${userId}/check-payment`, {
+      method: 'POST',
+      body: JSON.stringify(data),
     });
   }
 

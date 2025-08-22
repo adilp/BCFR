@@ -21,6 +21,13 @@ public class UpdateRoleRequest
     public string Role { get; set; } = string.Empty;
 }
 
+public class RecordCheckPaymentRequest
+{
+    public string MembershipTier { get; set; } = string.Empty;
+    public decimal Amount { get; set; }
+    public DateTime StartDate { get; set; }
+}
+
 public class AdminStats
 {
     public int TotalUsers { get; set; }

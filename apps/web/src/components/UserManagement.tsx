@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import UserDetailsDrawer from './UserDetailsDrawer';
 import { getApiClient } from '@memberorg/api-client';
-import type { User } from '@memberorg/shared';
-import { formatAddress } from '@memberorg/shared';
+import type { AdminUser } from '@memberorg/shared';
+import { formatAddress, formatDateForDisplay } from '@memberorg/shared';
 import { 
   MagnifyingGlassIcon,
   ChevronRightIcon,
@@ -13,21 +13,9 @@ import {
 } from '@heroicons/react/24/outline';
 import './UserManagement.css';
 
-// Use the same interface as UserDetailsDrawer for consistency
-interface UserWithSubscription extends User {
-  membershipTier?: string;
-  subscriptionStatus?: string;
-  joinDate?: string;
-  lastLogin?: string;
-  stripeCustomerId?: string;
-  nextBillingDate?: string;
-  amount?: number;
-  dietaryRestrictions?: string[];
-}
-
 function UserManagement() {
-  const [users, setUsers] = useState<UserWithSubscription[]>([]);
-  const [selectedUser, setSelectedUser] = useState<UserWithSubscription | null>(null);
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState('all');
@@ -57,20 +45,18 @@ function UserManagement() {
       
       setTotalCount(totalCount);
       
-      // Map API response to UserWithSubscription interface
-      const mappedUsers: UserWithSubscription[] = fetchedUsers.map((u: any) => ({
-        ...u,
-        membershipTier: u.membershipTier,
-        subscriptionStatus: u.subscriptionStatus,
-        joinDate: u.createdAt,
-        lastLogin: u.updatedAt,
-        stripeCustomerId: u.stripeCustomerId,
-        nextBillingDate: u.nextBillingDate,
-        amount: u.amount,
-        dietaryRestrictions: u.dietaryRestrictions || []
-      }));
+      // Debug: Log the fetched users to see subscription data
+      console.log('Fetched users:', fetchedUsers);
+      if (fetchedUsers.length > 0) {
+        console.log('First user subscription data:', {
+          membershipTier: fetchedUsers[0].membershipTier,
+          subscriptionStatus: fetchedUsers[0].subscriptionStatus,
+          nextBillingDate: fetchedUsers[0].nextBillingDate,
+          amount: fetchedUsers[0].amount
+        });
+      }
       
-      setUsers(mappedUsers);
+      setUsers(fetchedUsers);
     } catch (err: any) {
       console.error('Failed to fetch users:', err);
       setError(err.message || 'Failed to load users');
@@ -79,29 +65,17 @@ function UserManagement() {
     }
   };
 
-  const handleSaveUser = async (updatedUser: UserWithSubscription) => {
+  const handleSaveUser = async (updatedUser: AdminUser) => {
     try {
       const apiClient = getApiClient();
-      // Convert UserWithSubscription to User for API call
-      const userUpdate: Partial<User> = {
-        id: updatedUser.id,
-        username: updatedUser.username,
-        email: updatedUser.email,
-        firstName: updatedUser.firstName,
-        lastName: updatedUser.lastName,
-        role: updatedUser.role as 'Admin' | 'Member',
-        phone: updatedUser.phone,
-        address: updatedUser.address,
-        city: updatedUser.city,
-        state: updatedUser.state,
-        zipCode: updatedUser.zipCode,
-        country: updatedUser.country,
-        dateOfBirth: updatedUser.dateOfBirth,
-        isActive: updatedUser.isActive,
-        dietaryRestrictions: updatedUser.dietaryRestrictions
-      };
-      await apiClient.updateUser(updatedUser.id, userUpdate);
-      await fetchUsers(); // Refresh the list
+      // The updateUser API now returns the updated user with subscription data
+      const updated = await apiClient.updateUser(updatedUser.id, updatedUser);
+      
+      // Update the local state with the returned data
+      setUsers(prevUsers => 
+        prevUsers.map(u => u.id === updated.id ? updated : u)
+      );
+      
       setSelectedUser(null);
     } catch (err: any) {
       console.error('Failed to update user:', err);
@@ -256,7 +230,32 @@ function UserManagement() {
                       {user.role}
                     </span>
                   </td>
-                  <td>{user.membershipTier || '-'}</td>
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      {user.membershipTier ? (
+                        <>
+                          <span>{user.membershipTier}</span>
+                          {user.stripeCustomerId?.startsWith('CHECK_') && (
+                            <span 
+                              className="badge" 
+                              style={{ 
+                                backgroundColor: '#e3f2fd', 
+                                color: '#1976d2',
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                fontSize: '0.75rem',
+                                fontWeight: '600'
+                              }}
+                            >
+                              CHECK
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        '-'
+                      )}
+                    </div>
+                  </td>
                   <td>
                     <span className={`tag tag-${getStatusColor(user.subscriptionStatus)}`}>
                       {user.subscriptionStatus || 'N/A'}
@@ -284,15 +283,21 @@ function UserManagement() {
                             </div>
                             <div className="detail-item">
                               <span className="detail-label">Date of Birth:</span>
-                              <span className="detail-value">{user.dateOfBirth || 'Not provided'}</span>
+                              <span className="detail-value">
+                                {user.dateOfBirth ? formatDateForDisplay(user.dateOfBirth, { format: 'short' }) : 'Not provided'}
+                              </span>
                             </div>
                             <div className="detail-item">
                               <span className="detail-label">Join Date:</span>
-                              <span className="detail-value">{user.joinDate || user.createdAt || 'Unknown'}</span>
+                              <span className="detail-value">
+                                {user.createdAt ? formatDateForDisplay(user.createdAt, { format: 'short' }) : 'Unknown'}
+                              </span>
                             </div>
                             <div className="detail-item">
                               <span className="detail-label">Last Login:</span>
-                              <span className="detail-value">{user.lastLogin || 'Never'}</span>
+                              <span className="detail-value">
+                                {user.lastLoginAt ? formatDateForDisplay(user.lastLoginAt, { format: 'short' }) : 'Never'}
+                              </span>
                             </div>
                           </div>
                           
@@ -317,7 +322,15 @@ function UserManagement() {
                           <div className="detail-section">
                             <h4>Subscription Details</h4>
                             <div className="detail-item">
-                              <span className="detail-label">Stripe ID:</span>
+                              <span className="detail-label">Payment Method:</span>
+                              <span className="detail-value">
+                                {user.stripeCustomerId ? (
+                                  user.stripeCustomerId.startsWith('CHECK_') ? '✓ Check' : '💳 Credit Card'
+                                ) : 'N/A'}
+                              </span>
+                            </div>
+                            <div className="detail-item">
+                              <span className="detail-label">Customer ID:</span>
                               <span className="detail-value">{user.stripeCustomerId || 'N/A'}</span>
                             </div>
                             <div className="detail-item">
@@ -328,7 +341,9 @@ function UserManagement() {
                             </div>
                             <div className="detail-item">
                               <span className="detail-label">Next Billing:</span>
-                              <span className="detail-value">{user.nextBillingDate || 'N/A'}</span>
+                              <span className="detail-value">
+                                {user.nextBillingDate ? formatDateForDisplay(user.nextBillingDate, { format: 'short' }) : 'N/A'}
+                              </span>
                             </div>
                           </div>
                         </div>

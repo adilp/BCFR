@@ -60,6 +60,7 @@ public class AppDbContext : DbContext
         {
             entity.ToTable("Subscriptions");
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedOnAdd(); // Auto-increment
             entity.Property(e => e.MembershipTier).IsRequired().HasMaxLength(50);
             entity.Property(e => e.StripeCustomerId).IsRequired().HasMaxLength(100);
             entity.Property(e => e.StripeSubscriptionId).IsRequired().HasMaxLength(100);
