@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import type { AdminUser } from '@memberorg/shared';
-import { formatDateForDisplay } from '@memberorg/shared';
 import { getApiClient } from '@memberorg/api-client';
 import ActivityTimeline from './ActivityTimeline';
 import Drawer from './shared/Drawer';

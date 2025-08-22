@@ -29,6 +29,8 @@ const MembershipPage = () => {
   const [age, setAge] = useState<number | null>(null)
   const [isRegistered, setIsRegistered] = useState(false)
   const [newRestriction, setNewRestriction] = useState('')
+  const [payByCheck, setPayByCheck] = useState(false)
+  const [showCheckInstructions, setShowCheckInstructions] = useState(false)
 
   // Calculate age from date of birth using shared utility
   const getAge = (dob: string): number => {
@@ -153,8 +155,13 @@ const MembershipPage = () => {
         dietaryRestrictions: formData.dietaryRestrictions.length > 0 ? formData.dietaryRestrictions : undefined
       })
       
-      // After successful registration, show the checkout form
+      // After successful registration
       setIsRegistered(true)
+      
+      // If paying by check, show instructions instead of Stripe checkout
+      if (payByCheck) {
+        setShowCheckInstructions(true)
+      }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Registration failed. Please try again.')
     } finally {
@@ -640,8 +647,38 @@ const MembershipPage = () => {
                 </div>
               )}
 
+              {/* Payment Method Selection */}
+              <div className="form-section" style={{ marginTop: '1.5rem' }}>
+                <h3 style={{ marginBottom: '1rem', fontSize: '1.1rem', color: '#333' }}>Payment Method</h3>
+                
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'flex-start', 
+                  padding: '1rem',
+                  backgroundColor: '#f9f9f9',
+                  borderRadius: '8px',
+                  marginBottom: '1rem'
+                }}>
+                  <input
+                    type="checkbox"
+                    id="payByCheck"
+                    checked={payByCheck}
+                    onChange={(e) => setPayByCheck(e.target.checked)}
+                    style={{ marginRight: '0.75rem', marginTop: '0.25rem' }}
+                    disabled={isLoading}
+                  />
+                  <label htmlFor="payByCheck" style={{ cursor: 'pointer', flex: 1 }}>
+                    <strong>I prefer to pay by check</strong>
+                    <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.9rem', color: '#666' }}>
+                      Select this option if you'd like to mail a check instead of paying online. 
+                      Your account will be activated once we receive and process your payment.
+                    </p>
+                  </label>
+                </div>
+              </div>
+
               <button type="submit" className="submit-btn" disabled={isLoading || !selectedPlan}>
-                {isLoading ? 'Creating Account...' : 'Create Account & Continue to Payment'}
+                {isLoading ? 'Creating Account...' : payByCheck ? 'Create Account & Get Check Instructions' : 'Create Account & Continue to Payment'}
               </button>
 
               {!selectedPlan && formData.email && formData.dateOfBirth && (
@@ -657,17 +694,124 @@ const MembershipPage = () => {
               </>
             ) : (
               <>
-                <div className="form-header">
-                  <h2>Complete Your Membership</h2>
-                  <p className="form-subtitle">
-                    Your account has been created successfully! Now complete your membership payment.
-                  </p>
-                </div>
-                {selectedPlan && (
-                  <CheckoutForm 
-                    membershipTier={selectedPlan}
-                    onError={(error) => setError(error)}
-                  />
+                {showCheckInstructions ? (
+                  <>
+                    <div className="form-header">
+                      <h2>Account Created Successfully!</h2>
+                      <p className="form-subtitle">
+                        Please follow the instructions below to complete your membership payment by check.
+                      </p>
+                    </div>
+                    
+                    <div style={{
+                      backgroundColor: '#f0f7ff',
+                      border: '2px solid #4263EB',
+                      borderRadius: '12px',
+                      padding: '2rem',
+                      marginTop: '2rem'
+                    }}>
+                      <h3 style={{ color: '#4263EB', marginBottom: '1rem' }}>
+                        📮 Check Payment Instructions
+                      </h3>
+                      
+                      <div style={{ marginBottom: '1.5rem' }}>
+                        <p style={{ fontWeight: '600', marginBottom: '0.5rem' }}>
+                          Please make your check payable to:
+                        </p>
+                        <div style={{ 
+                          backgroundColor: 'white', 
+                          padding: '1rem', 
+                          borderRadius: '8px',
+                          fontFamily: 'monospace',
+                          fontSize: '1.1rem'
+                        }}>
+                          Birmingham Committee on Foreign Relations
+                        </div>
+                      </div>
+                      
+                      <div style={{ marginBottom: '1.5rem' }}>
+                        <p style={{ fontWeight: '600', marginBottom: '0.5rem' }}>
+                          Mail your check to:
+                        </p>
+                        <div style={{ 
+                          backgroundColor: 'white', 
+                          padding: '1rem', 
+                          borderRadius: '8px',
+                          fontFamily: 'monospace',
+                          fontSize: '1.1rem',
+                          lineHeight: '1.6'
+                        }}>
+                          Birmingham Committee on Foreign Relations<br />
+                          P.O. Box 130003<br />
+                          Birmingham, AL 35213-0003
+                        </div>
+                      </div>
+                      
+                      <div style={{ marginBottom: '1.5rem' }}>
+                        <p style={{ fontWeight: '600', marginBottom: '0.5rem' }}>
+                          Amount Due:
+                        </p>
+                        <div style={{ 
+                          backgroundColor: '#FFC833', 
+                          padding: '1rem', 
+                          borderRadius: '8px',
+                          fontSize: '1.5rem',
+                          fontWeight: 'bold',
+                          textAlign: 'center'
+                        }}>
+                          {selectedPlan === 'over40' && '$300.00'}
+                          {selectedPlan === 'under40' && '$200.00'}
+                          {selectedPlan === 'student' && '$75.00'}
+                        </div>
+                      </div>
+                      
+                      <div style={{ 
+                        backgroundColor: '#fff9e6', 
+                        border: '1px solid #FFC833',
+                        padding: '1rem', 
+                        borderRadius: '8px',
+                        marginTop: '1rem'
+                      }}>
+                        <p style={{ margin: 0, fontSize: '0.9rem' }}>
+                          <strong>Important:</strong> Your membership will be activated once we receive and process your check. 
+                          This typically takes 5-7 business days after mailing. You will receive an email confirmation 
+                          when your membership is active.
+                        </p>
+                      </div>
+                      
+                      <div style={{ marginTop: '2rem', textAlign: 'center' }}>
+                        <a 
+                          href="/login" 
+                          className="submit-btn" 
+                          style={{ 
+                            display: 'inline-block', 
+                            textDecoration: 'none',
+                            backgroundColor: '#6B3AA0'
+                          }}
+                        >
+                          Go to Login
+                        </a>
+                        <p style={{ marginTop: '1rem', fontSize: '0.9rem', color: '#666' }}>
+                          You can log in to your account now, but membership features will be available after payment processing.
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="form-header">
+                      <h2>Complete Your Membership</h2>
+                      <p className="form-subtitle">
+                        Your account has been created successfully! Now complete your membership payment.
+                      </p>
+                    </div>
+                    {selectedPlan && (
+                      <CheckoutForm 
+                        membershipTier={selectedPlan}
+                        onError={(error) => setError(error)}
+                      />
+                    )}
+                  </>
                 )}
               </>
             )}
