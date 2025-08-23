@@ -3,7 +3,7 @@ import './MembershipPage.css'
 import Navigation from './Navigation'
 import { useAuth } from '../contexts/AuthContext'
 import CheckoutForm from './CheckoutForm'
-import { calculateAge, formatForDateInput, validateEmail, validatePhone, validateZipCode, isRequired, validatePassword } from '@memberorg/shared'
+import { calculateAge, formatForDateInput, validateEmail, validatePhone, validateZipCode, isRequired } from '@memberorg/shared'
 
 const MembershipPage = () => {
   const { register } = useAuth()
@@ -106,13 +106,6 @@ const MembershipPage = () => {
       return
     }
     
-    // Validate password strength
-    const passwordValidation = validatePassword(formData.password)
-    if (!passwordValidation.isValid) {
-      setError(passwordValidation.errors[0])
-      return
-    }
-
     // Validate passwords match
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match')
