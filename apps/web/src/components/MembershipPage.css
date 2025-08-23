@@ -234,9 +234,25 @@
   box-shadow: 0 0 0 3px rgba(66, 99, 235, 0.1);
 }
 
+.form-group input.error {
+  border-color: #dc3545;
+}
+
+.form-group input.error:focus {
+  border-color: #dc3545;
+  box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
+}
+
 .form-group input::placeholder {
   color: #adb5bd;
   font-weight: 400;
+}
+
+.form-error {
+  color: #dc3545;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+  display: block;
 }
 
 .form-helper {

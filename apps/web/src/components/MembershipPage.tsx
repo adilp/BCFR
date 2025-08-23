@@ -31,10 +31,51 @@ const MembershipPage = () => {
   const [newRestriction, setNewRestriction] = useState('')
   const [payByCheck, setPayByCheck] = useState(false)
   const [showCheckInstructions, setShowCheckInstructions] = useState(false)
+  
+  // Field-specific error states
+  const [fieldErrors, setFieldErrors] = useState<{[key: string]: string}>({})
+  const [touchedFields, setTouchedFields] = useState<{[key: string]: boolean}>({})
 
   // Calculate age from date of birth using shared utility
   const getAge = (dob: string): number => {
     return calculateAge(dob) || 0
+  }
+
+  // Validate individual fields
+  const validateField = (name: string, value: string): string => {
+    switch (name) {
+      case 'firstName':
+        return !isRequired(value) ? 'First name is required' : ''
+      case 'lastName':
+        return !isRequired(value) ? 'Last name is required' : ''
+      case 'email':
+        if (!isRequired(value)) return 'Email is required'
+        if (!validateEmail(value)) return 'Please enter a valid email address'
+        return ''
+      case 'username':
+        if (!isRequired(value)) return 'Username is required'
+        if (value.length < 3) return 'Username must be at least 3 characters'
+        return ''
+      case 'password':
+        if (!isRequired(value)) return 'Password is required'
+        if (value.length < 6) return 'Password must be at least 6 characters'
+        return ''
+      case 'confirmPassword':
+        if (!isRequired(value)) return 'Please confirm your password'
+        if (value !== formData.password) return 'Passwords do not match'
+        return ''
+      case 'phone':
+        if (value && !validatePhone(value)) return 'Please enter a valid phone number'
+        return ''
+      case 'zipCode':
+        if (value && !validateZipCode(value)) return 'Please enter a valid ZIP code'
+        return ''
+      case 'dateOfBirth':
+        if (!isRequired(value)) return 'Date of birth is required'
+        return ''
+      default:
+        return ''
+    }
   }
 
   // Auto-select membership tier based on DOB and email
@@ -65,6 +106,38 @@ const MembershipPage = () => {
       [name]: value
     }))
     setError('')
+    
+    // Real-time validation only if field has been touched
+    if (touchedFields[name]) {
+      const error = validateField(name, value)
+      setFieldErrors(prev => ({
+        ...prev,
+        [name]: error
+      }))
+      
+      // Also validate confirmPassword when password changes
+      if (name === 'password' && touchedFields['confirmPassword']) {
+        const confirmError = validateField('confirmPassword', formData.confirmPassword)
+        setFieldErrors(prev => ({
+          ...prev,
+          confirmPassword: confirmError
+        }))
+      }
+    }
+  }
+
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const { name, value } = e.target
+    setTouchedFields(prev => ({
+      ...prev,
+      [name]: true
+    }))
+    
+    const error = validateField(name, value)
+    setFieldErrors(prev => ({
+      ...prev,
+      [name]: error
+    }))
   }
 
   const handleAddRestriction = () => {
@@ -88,37 +161,36 @@ const MembershipPage = () => {
     e.preventDefault()
     setError('')
 
-    // Validate required fields
-    if (!isRequired(formData.firstName)) {
-      setError('First name is required')
-      return
-    }
-    if (!isRequired(formData.lastName)) {
-      setError('Last name is required')
-      return
-    }
-    if (!isRequired(formData.email) || !validateEmail(formData.email)) {
-      setError('Valid email is required')
-      return
-    }
-    if (!isRequired(formData.username)) {
-      setError('Username is required')
-      return
+    // Validate all fields
+    const newErrors: {[key: string]: string} = {}
+    const fieldsToValidate = ['firstName', 'lastName', 'email', 'username', 'password', 'confirmPassword', 'dateOfBirth']
+    
+    fieldsToValidate.forEach(field => {
+      const error = validateField(field, formData[field as keyof typeof formData] as string)
+      if (error) {
+        newErrors[field] = error
+      }
+    })
+    
+    // Validate optional fields if they have values
+    if (formData.phone) {
+      const phoneError = validateField('phone', formData.phone)
+      if (phoneError) newErrors.phone = phoneError
     }
     
-    // Validate passwords match
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match')
-      return
+    if (formData.zipCode) {
+      const zipError = validateField('zipCode', formData.zipCode)
+      if (zipError) newErrors.zipCode = zipError
     }
 
-    // Validate optional fields if provided
-    if (formData.phone && !validatePhone(formData.phone)) {
-      setError('Please enter a valid phone number')
-      return
-    }
-    if (formData.zipCode && !validateZipCode(formData.zipCode)) {
-      setError('Please enter a valid ZIP code')
+    // If there are errors, set them and mark all fields as touched
+    if (Object.keys(newErrors).length > 0) {
+      setFieldErrors(newErrors)
+      const newTouchedFields: {[key: string]: boolean} = {}
+      fieldsToValidate.forEach(field => {
+        newTouchedFields[field] = true
+      })
+      setTouchedFields(newTouchedFields)
       return
     }
 
@@ -354,10 +426,17 @@ const MembershipPage = () => {
                       name="firstName"
                       value={formData.firstName}
                       onChange={handleInputChange}
+                      onBlur={handleBlur}
                       placeholder="Your first name"
                       required
                       disabled={isLoading}
+                      style={{ borderColor: fieldErrors.firstName ? '#dc3545' : '' }}
                     />
+                    {fieldErrors.firstName && (
+                      <span style={{ color: '#dc3545', fontSize: '0.875rem', marginTop: '0.25rem', display: 'block' }}>
+                        {fieldErrors.firstName}
+                      </span>
+                    )}
                   </div>
                   <div className="form-group">
                     <label htmlFor="lastName">Last Name *</label>
@@ -367,10 +446,17 @@ const MembershipPage = () => {
                       name="lastName"
                       value={formData.lastName}
                       onChange={handleInputChange}
+                      onBlur={handleBlur}
                       placeholder="Your last name"
                       required
                       disabled={isLoading}
+                      style={{ borderColor: fieldErrors.lastName ? '#dc3545' : '' }}
                     />
+                    {fieldErrors.lastName && (
+                      <span style={{ color: '#dc3545', fontSize: '0.875rem', marginTop: '0.25rem', display: 'block' }}>
+                        {fieldErrors.lastName}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -383,13 +469,22 @@ const MembershipPage = () => {
                       name="dateOfBirth"
                       value={formData.dateOfBirth}
                       onChange={handleInputChange}
+                      onBlur={handleBlur}
                       max={formatForDateInput(new Date())}
                       required
                       disabled={isLoading}
+                      style={{ borderColor: fieldErrors.dateOfBirth ? '#dc3545' : '' }}
                     />
-                    <small style={{ color: '#666', fontSize: '0.8rem' }}>
-                      Used to determine membership tier
-                    </small>
+                    {fieldErrors.dateOfBirth && (
+                      <span style={{ color: '#dc3545', fontSize: '0.875rem', marginTop: '0.25rem', display: 'block' }}>
+                        {fieldErrors.dateOfBirth}
+                      </span>
+                    )}
+                    {!fieldErrors.dateOfBirth && (
+                      <small style={{ color: '#666', fontSize: '0.8rem' }}>
+                        Used to determine membership tier
+                      </small>
+                    )}
                   </div>
                   <div className="form-group">
                     <label htmlFor="phone">Phone Number</label>
@@ -399,9 +494,16 @@ const MembershipPage = () => {
                       name="phone"
                       value={formData.phone}
                       onChange={handleInputChange}
+                      onBlur={handleBlur}
                       placeholder="(555) 123-4567"
                       disabled={isLoading}
+                      style={{ borderColor: fieldErrors.phone ? '#dc3545' : '' }}
                     />
+                    {fieldErrors.phone && (
+                      <span style={{ color: '#dc3545', fontSize: '0.875rem', marginTop: '0.25rem', display: 'block' }}>
+                        {fieldErrors.phone}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -455,9 +557,16 @@ const MembershipPage = () => {
                       name="zipCode"
                       value={formData.zipCode}
                       onChange={handleInputChange}
+                      onBlur={handleBlur}
                       placeholder="35203"
                       disabled={isLoading}
+                      style={{ borderColor: fieldErrors.zipCode ? '#dc3545' : '' }}
                     />
+                    {fieldErrors.zipCode && (
+                      <span style={{ color: '#dc3545', fontSize: '0.875rem', marginTop: '0.25rem', display: 'block' }}>
+                        {fieldErrors.zipCode}
+                      </span>
+                    )}
                   </div>
                   <div className="form-group">
                     <label htmlFor="country">Country</label>
@@ -568,10 +677,17 @@ const MembershipPage = () => {
                     name="username"
                     value={formData.username}
                     onChange={handleInputChange}
+                    onBlur={handleBlur}
                     placeholder="Choose a username"
                     required
                     disabled={isLoading}
+                    style={{ borderColor: fieldErrors.username ? '#dc3545' : '' }}
                   />
+                  {fieldErrors.username && (
+                    <span style={{ color: '#dc3545', fontSize: '0.875rem', marginTop: '0.25rem', display: 'block' }}>
+                      {fieldErrors.username}
+                    </span>
+                  )}
                 </div>
 
                 <div className="form-group">
@@ -582,13 +698,22 @@ const MembershipPage = () => {
                     name="email"
                     value={formData.email}
                     onChange={handleInputChange}
+                    onBlur={handleBlur}
                     placeholder="your.email@example.com"
                     required
                     disabled={isLoading}
+                    style={{ borderColor: fieldErrors.email ? '#dc3545' : '' }}
                   />
-                  <small style={{ color: '#666', fontSize: '0.8rem' }}>
-                    Students: Use your .edu email to qualify for student membership
-                  </small>
+                  {fieldErrors.email && (
+                    <span style={{ color: '#dc3545', fontSize: '0.875rem', marginTop: '0.25rem', display: 'block' }}>
+                      {fieldErrors.email}
+                    </span>
+                  )}
+                  {!fieldErrors.email && (
+                    <small style={{ color: '#666', fontSize: '0.8rem' }}>
+                      Students: Use your .edu email to qualify for student membership
+                    </small>
+                  )}
                 </div>
 
                 <div className="form-row">
@@ -600,10 +725,17 @@ const MembershipPage = () => {
                       name="password"
                       value={formData.password}
                       onChange={handleInputChange}
+                      onBlur={handleBlur}
                       placeholder="••••••••••••"
                       required
                       disabled={isLoading}
+                      style={{ borderColor: fieldErrors.password ? '#dc3545' : '' }}
                     />
+                    {fieldErrors.password && (
+                      <span style={{ color: '#dc3545', fontSize: '0.875rem', marginTop: '0.25rem', display: 'block' }}>
+                        {fieldErrors.password}
+                      </span>
+                    )}
                   </div>
                   <div className="form-group">
                     <label htmlFor="confirmPassword">Confirm Password *</label>
@@ -613,10 +745,17 @@ const MembershipPage = () => {
                       name="confirmPassword"
                       value={formData.confirmPassword}
                       onChange={handleInputChange}
+                      onBlur={handleBlur}
                       placeholder="••••••••••••"
                       required
                       disabled={isLoading}
+                      style={{ borderColor: fieldErrors.confirmPassword ? '#dc3545' : '' }}
                     />
+                    {fieldErrors.confirmPassword && (
+                      <span style={{ color: '#dc3545', fontSize: '0.875rem', marginTop: '0.25rem', display: 'block' }}>
+                        {fieldErrors.confirmPassword}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
