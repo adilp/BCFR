@@ -849,6 +849,7 @@ namespace MemberOrgApi.Services
                 textBody = "Birmingham Committee on Foreign Relations\n\n" + textBody + "\n\n© 2025 BCFR. All rights reserved.";
 
                 // Send individual emails to each recipient to maintain privacy
+                // Add delay to respect Resend's rate limit (2 requests per second)
                 foreach (var toEmail in toEmails)
                 {
                     var message = new EmailMessage
@@ -861,6 +862,9 @@ namespace MemberOrgApi.Services
                     };
 
                     await _resend.EmailSendAsync(message);
+                    
+                    // Wait 1 second between emails to stay safely under rate limit
+                    await Task.Delay(1000);
                 }
                 
                 _logger.LogInformation($"Broadcast email sent to {toEmails.Count} individual recipients with subject: {subject}");
