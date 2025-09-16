@@ -164,7 +164,8 @@ public class EventsController : ControllerBase
         // Send announcement emails if event is published
         if (evt.Status == "published")
         {
-            await SendEventAnnouncementEmails(evt);
+            // Fire and forget - don't wait for emails to send
+            _ = Task.Run(async () => await SendEventAnnouncementEmails(evt));
         }
 
         return CreatedAtAction(nameof(GetEvent), new { id = evt.Id }, dto);
@@ -229,7 +230,8 @@ public class EventsController : ControllerBase
         // Send announcement emails if event is being published for the first time
         if (previousStatus != "published" && updateDto.Status == "published")
         {
-            await SendEventAnnouncementEmails(evt);
+            // Fire and forget - don't wait for emails to send
+            _ = Task.Run(async () => await SendEventAnnouncementEmails(evt));
         }
 
         return NoContent();
@@ -569,16 +571,10 @@ public class EventsController : ControllerBase
         {
             _logger.LogInformation("Starting to send announcement emails for event: {EventId}", evt.Id);
 
-            // TEMPORARY: Only send to test user for production testing
-            // TODO: Remove this filter after testing is complete
-            var testEmailFilter = "adilpatel420@gmail.com"; // Change this to your test email
-
             // Get all active users (Members and Admins)
             var users = await _context.Users
-                .Where(u => u.IsActive && u.Email == testEmailFilter) // TEMPORARY: Filter for test user only
+                .Where(u => u.IsActive)
                 .ToListAsync();
-
-            _logger.LogWarning("TEST MODE: Only sending event announcement to test user: {TestEmail}", testEmailFilter);
 
             if (!users.Any())
             {
