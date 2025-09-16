@@ -182,12 +182,15 @@ export class ApiClient {
     try {
       return await this.request<EventRsvp>(`/events/${eventId}/my-rsvp`);
     } catch (error: any) {
-      // Only return null for 404 (no RSVP found)
+      // 404 is expected when user hasn't RSVP'd yet - return null silently
       if (error.statusCode === 404) {
         return null;
       }
-      console.error(`Error fetching RSVP for event ${eventId}:`, error);
-      // For now, return null for all errors to maintain backward compatibility
+      // Log other unexpected errors
+      if (error.statusCode !== 404) {
+        console.error(`Error fetching RSVP for event ${eventId}:`, error);
+      }
+      // Return null for all errors to maintain backward compatibility
       return null;
     }
   }

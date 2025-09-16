@@ -5,3 +5,5 @@ export { default as Drawer } from './Drawer';
 export { FormSection, FormGroup, FormGrid } from './FormSection';
 export { default as TabNavigation } from './TabNavigation';
 export type { Tab } from './TabNavigation';
+export { Snackbar, SnackbarContainer, showSnackbar } from './Snackbar';
+export type { SnackbarType } from './Snackbar';

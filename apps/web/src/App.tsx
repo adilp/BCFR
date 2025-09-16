@@ -2,6 +2,7 @@ import { RouterProvider } from '@tanstack/react-router'
 import { router } from './router'
 import { AuthProvider } from './contexts/AuthContext'
 import { initializeApiClient } from '@memberorg/api-client'
+import { SnackbarContainer } from './components/shared'
 import './App.css'
 
 // Initialize the API client with proper configuration
@@ -26,6 +27,7 @@ function App() {
   return (
     <AuthProvider>
       <RouterProvider router={router} />
+      <SnackbarContainer />
     </AuthProvider>
   )
 }

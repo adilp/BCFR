@@ -5,6 +5,7 @@ import { getApiClient } from '@memberorg/api-client'
 import type { Event } from '@memberorg/shared'
 import { formatDateForDisplay, formatTimeTo12Hour } from '@memberorg/shared'
 import { useAuth } from '../contexts/AuthContext'
+import { showSnackbar } from './shared'
 
 interface EventDisplay extends Event {
   // For display
@@ -29,13 +30,13 @@ const defaultEvents: EventDisplay[] = [
     month: 'FEB',
     title: 'The Future of NATO: Challenges and Opportunities',
     description: 'Ambassador Jane Smith discusses the evolving role of NATO in global security',
-    eventDate: '2025-02-15',
+    eventDate: '2026-02-15',
     eventTime: '12:00',
     endTime: '13:30',
     time: '12:00 PM - 1:30 PM',
     location: 'The Club Birmingham, Downtown',
     speaker: 'Ambassador Jane Smith, Former US Ambassador to NATO',
-    rsvpDeadline: '2025-02-12',
+    rsvpDeadline: '2026-02-12',
     allowPlusOne: true,
     status: 'published',
     userRsvpStatus: null,
@@ -53,13 +54,13 @@ const defaultEvents: EventDisplay[] = [
     month: 'FEB',
     title: 'Economic Diplomacy in the 21st Century',
     description: 'Panel discussion on trade relations and economic partnerships',
-    eventDate: '2025-02-22',
+    eventDate: '2026-02-22',
     eventTime: '18:00',
     endTime: '20:00',
     time: '6:00 PM - 8:00 PM',
     location: 'Birmingham Museum of Art',
     speaker: 'Panel: Dr. Michael Chen, Prof. Sarah Williams, Amb. Robert Davis',
-    rsvpDeadline: '2025-02-19',
+    rsvpDeadline: '2026-02-19',
     allowPlusOne: true,
     status: 'published',
     userRsvpStatus: 'yes',
@@ -77,13 +78,13 @@ const defaultEvents: EventDisplay[] = [
     month: 'MAR',
     title: 'Climate Change and International Cooperation',
     description: 'Exploring global solutions to environmental challenges',
-    eventDate: '2025-03-08',
+    eventDate: '2026-03-08',
     eventTime: '12:00',
     endTime: '13:30',
     time: '12:00 PM - 1:30 PM',
     location: 'The Club Birmingham, Downtown',
     speaker: 'Dr. Emily Rodriguez, UN Climate Envoy',
-    rsvpDeadline: '2025-03-05',
+    rsvpDeadline: '2026-03-05',
     allowPlusOne: true,
     status: 'published',
     userRsvpStatus: null,
@@ -135,6 +136,7 @@ const EventsList = ({ events: propEvents, showHeader = true, showDetails = false
     try {
       const apiClient = getApiClient()
       const rsvpPromises = events.map(async (event) => {
+        // getMyRsvp returns null if no RSVP found (404), which is expected
         const rsvp = await apiClient.getMyRsvp(event.id)
         return {
           eventId: event.id,
@@ -144,7 +146,7 @@ const EventsList = ({ events: propEvents, showHeader = true, showDetails = false
 
       const rsvpResults = await Promise.all(rsvpPromises)
       const rsvpMap: Record<string, { status: 'yes' | 'no' | 'pending', plusOne: boolean }> = {}
-      
+
       rsvpResults.forEach(result => {
         if (result.rsvp) {
           rsvpMap[result.eventId] = {
@@ -153,9 +155,10 @@ const EventsList = ({ events: propEvents, showHeader = true, showDetails = false
           }
         }
       })
-      
+
       setUserRsvps(rsvpMap)
     } catch (error) {
+      // Only log unexpected errors, not 404s (which are handled by getMyRsvp)
       console.error('Failed to fetch user RSVPs:', error)
     }
   }
@@ -195,7 +198,7 @@ const EventsList = ({ events: propEvents, showHeader = true, showDetails = false
 
   const handleRsvp = async (eventId: string, status: 'yes' | 'no') => {
     if (!isAuthenticated) {
-      alert('Please login to RSVP')
+      showSnackbar('Please login to RSVP', 'warning')
       return
     }
 
@@ -205,18 +208,29 @@ const EventsList = ({ events: propEvents, showHeader = true, showDetails = false
         response: status,
         hasPlusOne: userRsvps[eventId]?.plusOne || false
       })
-      
+
       setUserRsvps(prev => ({
         ...prev,
         [eventId]: { status, plusOne: prev[eventId]?.plusOne || false }
       }))
+
+      // Find the event name for the notification
+      const event = events.find(e => e.id === eventId)
+      const eventTitle = event?.title || 'the event'
+
+      // Show success notification
+      if (status === 'yes') {
+        showSnackbar(`You have RSVP'd YES to ${eventTitle}`, 'success', 4000)
+      } else {
+        showSnackbar(`You have RSVP'd NO to ${eventTitle}`, 'info', 4000)
+      }
 
       // Refresh event to get updated RSVP stats
       const updatedEvent = await apiClient.getEvent(eventId)
       setEvents(prev => prev.map(e => e.id === eventId ? formatEventForDisplay(updatedEvent) : e))
     } catch (error: any) {
       console.error('Failed to submit RSVP:', error)
-      alert(error.message || 'Failed to submit RSVP')
+      showSnackbar(error.message || 'Failed to submit RSVP', 'error')
     }
   }
 
@@ -232,14 +246,21 @@ const EventsList = ({ events: propEvents, showHeader = true, showDetails = false
         response: responseStatus as 'yes' | 'no',
         hasPlusOne
       })
-      
+
       setUserRsvps(prev => ({
         ...prev,
         [eventId]: { ...prev[eventId], plusOne: hasPlusOne }
       }))
+
+      // Show notification for plus one update
+      if (hasPlusOne) {
+        showSnackbar('Plus one added to your RSVP', 'success', 3000)
+      } else {
+        showSnackbar('Plus one removed from your RSVP', 'info', 3000)
+      }
     } catch (error: any) {
       console.error('Failed to update plus one:', error)
-      alert(error.message || 'Failed to update plus one')
+      showSnackbar(error.message || 'Failed to update plus one', 'error')
     }
   }
 
