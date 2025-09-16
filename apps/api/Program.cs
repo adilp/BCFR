@@ -126,6 +126,9 @@ builder.Services.AddScoped<IStripeService, StripeService>();
 // Configure Email Service
 builder.Services.AddScoped<IEmailService, EmailService>();
 
+// Configure Token Service
+builder.Services.AddScoped<ITokenService, TokenService>();
+
 // Register activity log service
 builder.Services.AddScoped<IActivityLogService, ActivityLogService>();
 builder.Services.AddHttpContextAccessor();

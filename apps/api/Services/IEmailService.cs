@@ -12,5 +12,8 @@ namespace MemberOrgApi.Services
         Task<bool> SendEventRegistrationConfirmationAsync(string toEmail, string eventName, DateTime eventDate);
         Task<bool> SendCustomEmailAsync(string toEmail, string subject, string htmlBody, string? textBody = null);
         Task<bool> SendBroadcastEmailAsync(List<string> toEmails, string subject, string bodyContent, bool isHtml = true);
+        Task<bool> SendEventAnnouncementEmailAsync(string toEmail, string firstName, string eventTitle,
+            string eventDescription, DateTime eventDate, TimeSpan startTime, TimeSpan endTime,
+            string location, string speaker, DateTime rsvpDeadline, bool allowPlusOne, string rsvpToken);
     }
 }

@@ -21,12 +21,21 @@ public class EventsController : ControllerBase
     private readonly AppDbContext _context;
     private readonly ILogger<EventsController> _logger;
     private readonly IActivityLogService _activityLogService;
+    private readonly IEmailService _emailService;
+    private readonly ITokenService _tokenService;
 
-    public EventsController(AppDbContext context, ILogger<EventsController> logger, IActivityLogService activityLogService)
+    public EventsController(
+        AppDbContext context,
+        ILogger<EventsController> logger,
+        IActivityLogService activityLogService,
+        IEmailService emailService,
+        ITokenService tokenService)
     {
         _context = context;
         _logger = logger;
         _activityLogService = activityLogService;
+        _emailService = emailService;
+        _tokenService = tokenService;
     }
 
     // GET: /events - Get all published events (public)
@@ -152,6 +161,12 @@ public class EventsController : ControllerBase
 
         _logger.LogInformation("Event created: {EventId} by {UserId}", evt.Id, userId);
 
+        // Send announcement emails if event is published
+        if (evt.Status == "published")
+        {
+            await SendEventAnnouncementEmails(evt);
+        }
+
         return CreatedAtAction(nameof(GetEvent), new { id = evt.Id }, dto);
     }
 
@@ -190,6 +205,8 @@ public class EventsController : ControllerBase
         var eventDateUtc = TimeZoneInfo.ConvertTimeToUtc(eventDateCentral, centralTimeZone);
         var rsvpDeadlineUtc = TimeZoneInfo.ConvertTimeToUtc(rsvpDeadlineCentral, centralTimeZone);
 
+        var previousStatus = evt.Status;
+
         evt.Title = updateDto.Title;
         evt.Description = updateDto.Description;
         evt.EventDate = eventDateUtc;
@@ -208,6 +225,12 @@ public class EventsController : ControllerBase
         await _context.SaveChangesAsync();
 
         _logger.LogInformation("Event updated: {EventId}", evt.Id);
+
+        // Send announcement emails if event is being published for the first time
+        if (previousStatus != "published" && updateDto.Status == "published")
+        {
+            await SendEventAnnouncementEmails(evt);
+        }
 
         return NoContent();
     }
@@ -538,5 +561,90 @@ public class EventsController : ControllerBase
 
         time = new TimeSpan(hours, minutes, 0);
         return true;
+    }
+
+    private async Task SendEventAnnouncementEmails(Event evt)
+    {
+        try
+        {
+            _logger.LogInformation("Starting to send announcement emails for event: {EventId}", evt.Id);
+
+            // TEMPORARY: Only send to test user for production testing
+            // TODO: Remove this filter after testing is complete
+            var testEmailFilter = "adilpatel420@gmail.com"; // Change this to your test email
+
+            // Get all active users (Members and Admins)
+            var users = await _context.Users
+                .Where(u => u.IsActive && u.Email == testEmailFilter) // TEMPORARY: Filter for test user only
+                .ToListAsync();
+
+            _logger.LogWarning("TEST MODE: Only sending event announcement to test user: {TestEmail}", testEmailFilter);
+
+            if (!users.Any())
+            {
+                _logger.LogWarning("No active users found to send event announcements");
+                return;
+            }
+
+            var successCount = 0;
+            var failedEmails = new List<string>();
+
+            // Send emails to each user with their unique RSVP token
+            foreach (var user in users)
+            {
+                try
+                {
+                    // Generate unique RSVP token for this user and event
+                    var rsvpToken = await _tokenService.GenerateRsvpTokenAsync(user.Id, evt.Id, evt.RsvpDeadline);
+
+                    // Send the announcement email
+                    var emailSent = await _emailService.SendEventAnnouncementEmailAsync(
+                        user.Email,
+                        user.FirstName,
+                        evt.Title,
+                        evt.Description,
+                        evt.EventDate,
+                        evt.StartTime,
+                        evt.EndTime,
+                        evt.Location,
+                        evt.Speaker,
+                        evt.RsvpDeadline,
+                        evt.AllowPlusOne,
+                        rsvpToken.Token
+                    );
+
+                    if (emailSent)
+                    {
+                        successCount++;
+                        _logger.LogInformation("Event announcement sent to {Email} for event {EventId}", user.Email, evt.Id);
+                    }
+                    else
+                    {
+                        failedEmails.Add(user.Email);
+                        _logger.LogWarning("Failed to send event announcement to {Email} for event {EventId}", user.Email, evt.Id);
+                    }
+
+                    // Add small delay to respect email service rate limits
+                    await Task.Delay(500);
+                }
+                catch (Exception ex)
+                {
+                    failedEmails.Add(user.Email);
+                    _logger.LogError(ex, "Error sending event announcement to {Email} for event {EventId}", user.Email, evt.Id);
+                }
+            }
+
+            _logger.LogInformation("Event announcement emails sent: {SuccessCount} successful, {FailedCount} failed for event {EventId}",
+                successCount, failedEmails.Count, evt.Id);
+
+            if (failedEmails.Any())
+            {
+                _logger.LogWarning("Failed to send announcements to: {FailedEmails}", string.Join(", ", failedEmails));
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error sending event announcement emails for event {EventId}", evt.Id);
+        }
     }
 }

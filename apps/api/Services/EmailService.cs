@@ -876,5 +876,391 @@ namespace MemberOrgApi.Services
                 return false;
             }
         }
+
+        public async Task<bool> SendEventAnnouncementEmailAsync(string toEmail, string firstName, string eventTitle,
+            string eventDescription, DateTime eventDate, TimeSpan startTime, TimeSpan endTime,
+            string location, string speaker, DateTime rsvpDeadline, bool allowPlusOne, string rsvpToken)
+        {
+            try
+            {
+                // Format dates and times for display
+                var eventDateFormatted = eventDate.ToString("dddd, MMMM dd, yyyy");
+                var startTimeFormatted = DateTime.Today.Add(startTime).ToString("h:mm tt");
+                var endTimeFormatted = DateTime.Today.Add(endTime).ToString("h:mm tt");
+                var rsvpDeadlineFormatted = rsvpDeadline.ToString("MMMM dd, yyyy");
+
+                // Base URL for RSVP actions - need to use API URL, not frontend URL
+                var apiBaseUrl = _configuration["App:ApiUrl"] ?? "http://localhost:5001/api";
+                var frontendBaseUrl = _configuration["App:BaseUrl"] ?? "http://localhost:5173";
+
+                // Generate RSVP URLs with the token - these go directly to the API
+                var rsvpYesUrl = $"{apiBaseUrl}/email-rsvp/respond?token={rsvpToken}&response=yes";
+                var rsvpNoUrl = $"{apiBaseUrl}/email-rsvp/respond?token={rsvpToken}&response=no";
+                var rsvpYesPlusOneUrl = $"{apiBaseUrl}/email-rsvp/respond?token={rsvpToken}&response=yes&plusOne=true";
+
+                var htmlBody = @"
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <style>
+                            body {
+                                font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', 'Roboto', sans-serif;
+                                line-height: 1.6;
+                                color: #212529;
+                                margin: 0;
+                                padding: 0;
+                                background-color: #fdf8f1;
+                            }
+                            .wrapper {
+                                background-color: #fdf8f1;
+                                padding: 40px 20px;
+                            }
+                            .container {
+                                max-width: 680px;
+                                margin: 0 auto;
+                                background-color: #ffffff;
+                                border-radius: 16px;
+                                overflow: hidden;
+                                box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+                            }
+                            .header {
+                                background: linear-gradient(135deg, #6B3AA0 0%, #4263EB 100%);
+                                color: white;
+                                padding: 60px 40px;
+                                text-align: center;
+                            }
+                            .header h1 {
+                                margin: 0 0 12px 0;
+                                font-size: 36px;
+                                font-weight: 700;
+                                letter-spacing: -0.02em;
+                            }
+                            .header p {
+                                margin: 0;
+                                font-size: 18px;
+                                opacity: 0.95;
+                            }
+                            .content {
+                                padding: 48px 40px;
+                                background-color: #ffffff;
+                            }
+                            .greeting {
+                                font-size: 20px;
+                                color: #212529;
+                                font-weight: 600;
+                                margin: 0 0 24px 0;
+                            }
+                            .event-card {
+                                background: #FFFFFF;
+                                border: 2px solid #E8E0D6;
+                                border-radius: 12px;
+                                padding: 32px;
+                                margin: 32px 0;
+                            }
+                            .event-title {
+                                color: #6B3AA0;
+                                font-size: 28px;
+                                font-weight: 700;
+                                margin: 0 0 16px 0;
+                                line-height: 1.3;
+                            }
+                            .event-description {
+                                color: #495057;
+                                font-size: 17px;
+                                line-height: 1.6;
+                                margin: 0 0 28px 0;
+                            }
+                            .event-details {
+                                background: #F5F2ED;
+                                border-radius: 8px;
+                                padding: 24px;
+                                margin: 24px 0;
+                            }
+                            .detail-row {
+                                display: flex;
+                                align-items: flex-start;
+                                margin: 0 0 16px 0;
+                                font-size: 16px;
+                            }
+                            .detail-row:last-child {
+                                margin: 0;
+                            }
+                            .detail-icon {
+                                font-size: 20px;
+                                margin-right: 12px;
+                                color: #6B3AA0;
+                                min-width: 24px;
+                            }
+                            .detail-label {
+                                color: #6C757D;
+                                font-weight: 600;
+                                min-width: 100px;
+                                margin-right: 12px;
+                            }
+                            .detail-value {
+                                color: #212529;
+                                flex: 1;
+                            }
+                            .speaker-section {
+                                background: linear-gradient(135deg, #FFF4E6 0%, #FFFFFF 100%);
+                                border-left: 4px solid #FFC833;
+                                padding: 20px 24px;
+                                margin: 28px 0;
+                                border-radius: 0 8px 8px 0;
+                            }
+                            .speaker-label {
+                                color: #6C757D;
+                                font-size: 14px;
+                                text-transform: uppercase;
+                                font-weight: 600;
+                                letter-spacing: 0.5px;
+                                margin: 0 0 8px 0;
+                            }
+                            .speaker-name {
+                                color: #212529;
+                                font-size: 18px;
+                                font-weight: 600;
+                                margin: 0;
+                            }
+                            .rsvp-section {
+                                background: #F5F2ED;
+                                border-radius: 12px;
+                                padding: 32px;
+                                margin: 32px 0;
+                                text-align: center;
+                            }
+                            .rsvp-title {
+                                color: #212529;
+                                font-size: 22px;
+                                font-weight: 600;
+                                margin: 0 0 8px 0;
+                            }
+                            .rsvp-subtitle {
+                                color: #6C757D;
+                                font-size: 16px;
+                                margin: 0 0 24px 0;
+                            }
+                            .rsvp-buttons {
+                                display: block;
+                                margin: 0 0 20px 0;
+                            }
+                            .btn-rsvp {
+                                display: inline-block;
+                                padding: 16px 40px;
+                                margin: 0 8px 12px 8px;
+                                text-decoration: none;
+                                font-weight: 600;
+                                font-size: 16px;
+                                border-radius: 8px;
+                                transition: all 200ms ease;
+                                text-align: center;
+                                min-width: 140px;
+                            }
+                            .btn-yes {
+                                background: #22C55E;
+                                color: white;
+                            }
+                            .btn-yes:hover {
+                                background: #16A34A;
+                                transform: translateY(-1px);
+                                box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+                            }
+                            .btn-no {
+                                background: #EF4444;
+                                color: white;
+                            }
+                            .btn-no:hover {
+                                background: #DC2626;
+                                transform: translateY(-1px);
+                                box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+                            }
+                            .btn-plus-one {
+                                background: #FFC833;
+                                color: #212529;
+                            }
+                            .btn-plus-one:hover {
+                                background: #FFD45C;
+                                transform: translateY(-1px);
+                                box-shadow: 0 4px 12px rgba(255, 200, 51, 0.3);
+                            }
+                            .plus-one-text {
+                                color: #6C757D;
+                                font-size: 14px;
+                                margin: 20px 0 0 0;
+                            }
+                            .deadline-warning {
+                                background: #FFF4E6;
+                                border: 1px solid #FFD98D;
+                                border-radius: 8px;
+                                padding: 16px;
+                                margin: 24px 0;
+                                text-align: center;
+                            }
+                            .deadline-warning p {
+                                margin: 0;
+                                color: #B45309;
+                                font-size: 15px;
+                                font-weight: 500;
+                            }
+                            .footer {
+                                background-color: #F5F2ED;
+                                padding: 32px;
+                                text-align: center;
+                            }
+                            .footer p {
+                                color: #6C757D;
+                                font-size: 14px;
+                                margin: 0 0 8px 0;
+                            }
+                            .footer a {
+                                color: #4263EB;
+                                text-decoration: none;
+                            }
+                            @media only screen and (max-width: 600px) {
+                                .container {
+                                    border-radius: 0;
+                                }
+                                .header {
+                                    padding: 40px 24px;
+                                }
+                                .header h1 {
+                                    font-size: 28px;
+                                }
+                                .content {
+                                    padding: 32px 24px;
+                                }
+                                .event-card {
+                                    padding: 24px;
+                                }
+                                .btn-rsvp {
+                                    display: block;
+                                    width: 100%;
+                                    margin: 0 0 12px 0;
+                                }
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <div class='wrapper'>
+                            <div class='container'>
+                                <div class='header'>
+                                    <h1>📢 New Event Announcement</h1>
+                                    <p>Birmingham Committee on Foreign Relations</p>
+                                </div>
+                                <div class='content'>
+                                    <p class='greeting'>Dear " + firstName + @",</p>
+                                    <p style='color: #495057; font-size: 17px; margin: 0 0 24px 0;'>We're excited to invite you to our upcoming event!</p>
+
+                                    <div class='event-card'>
+                                        <h2 class='event-title'>" + eventTitle + @"</h2>
+                                        <p class='event-description'>" + eventDescription + @"</p>
+
+                                        <div class='event-details'>
+                                            <div class='detail-row'>
+                                                <span class='detail-icon'>📅</span>
+                                                <span class='detail-label'>Date:</span>
+                                                <span class='detail-value'>" + eventDateFormatted + @"</span>
+                                            </div>
+                                            <div class='detail-row'>
+                                                <span class='detail-icon'>⏰</span>
+                                                <span class='detail-label'>Time:</span>
+                                                <span class='detail-value'>" + startTimeFormatted + " - " + endTimeFormatted + @"</span>
+                                            </div>
+                                            <div class='detail-row'>
+                                                <span class='detail-icon'>📍</span>
+                                                <span class='detail-label'>Location:</span>
+                                                <span class='detail-value'>" + location + @"</span>
+                                            </div>
+                                        </div>
+
+                                        <div class='speaker-section'>
+                                            <p class='speaker-label'>Featured Speaker</p>
+                                            <p class='speaker-name'>" + speaker + @"</p>
+                                        </div>
+                                    </div>
+
+                                    <div class='rsvp-section'>
+                                        <h3 class='rsvp-title'>Will you be joining us?</h3>
+                                        <p class='rsvp-subtitle'>Click below to RSVP directly from this email</p>
+
+                                        <div class='rsvp-buttons'>
+                                            <a href='" + rsvpYesUrl + @"' class='btn-rsvp btn-yes'>✓ Yes, I'll Attend</a>
+                                            <a href='" + rsvpNoUrl + @"' class='btn-rsvp btn-no'>✗ No, Can't Make It</a>
+                                        </div>
+                                        " + (allowPlusOne ? @"
+                                        <div style='margin-top: 20px;'>
+                                            <a href='" + rsvpYesPlusOneUrl + @"' class='btn-rsvp btn-plus-one'>✓ Yes + Guest</a>
+                                            <p class='plus-one-text'>Bringing a plus one? Click the button above!</p>
+                                        </div>" : "") + @"
+                                    </div>
+
+                                    <div class='deadline-warning'>
+                                        <p>⚠️ Please RSVP by <strong>" + rsvpDeadlineFormatted + @"</strong></p>
+                                    </div>
+
+                                    <p style='color: #6C757D; font-size: 14px; text-align: center; margin: 24px 0 0 0;'>
+                                        Can't click the buttons? Visit our website and login to RSVP:
+                                        <a href='" + frontendBaseUrl + @"/events' style='color: #4263EB;'>" + frontendBaseUrl + @"/events</a>
+                                    </p>
+                                </div>
+                                <div class='footer'>
+                                    <p><strong>Birmingham Committee on Foreign Relations</strong></p>
+                                    <p>© 2025 BCFR. All rights reserved.</p>
+                                    <p>You received this email as a member of BCFR</p>
+                                    <p><a href='" + frontendBaseUrl + @"'>Visit Our Website</a> | <a href='mailto:info@birminghamforeignrelations.org'>Contact Us</a></p>
+                                </div>
+                            </div>
+                        </div>
+                    </body>
+                    </html>";
+
+                var textBody = $@"New Event Announcement
+
+Dear {firstName},
+
+We're excited to invite you to our upcoming event!
+
+EVENT DETAILS
+=============
+{eventTitle}
+
+{eventDescription}
+
+Date: {eventDateFormatted}
+Time: {startTimeFormatted} - {endTimeFormatted}
+Location: {location}
+Featured Speaker: {speaker}
+
+RSVP
+====
+Please RSVP by {rsvpDeadlineFormatted}
+
+To RSVP, please visit: {frontendBaseUrl}/events
+
+Best regards,
+The BCFR Team
+
+Birmingham Committee on Foreign Relations
+© 2025 BCFR. All rights reserved.";
+
+                var message = new EmailMessage
+                {
+                    From = _fromName + " <" + _fromEmail + ">",
+                    To = toEmail,
+                    Subject = "BCFR Event Invitation: " + eventTitle,
+                    HtmlBody = htmlBody,
+                    TextBody = textBody
+                };
+
+                await _resend.EmailSendAsync(message);
+                _logger.LogInformation($"Event announcement email sent to {toEmail} for event: {eventTitle}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Failed to send event announcement email to {toEmail}");
+                return false;
+            }
+        }
     }
 }

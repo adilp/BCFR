@@ -16,6 +16,7 @@ public class AppDbContext : DbContext
     public DbSet<ActivityLog> ActivityLogs { get; set; }
     public DbSet<Event> Events { get; set; }
     public DbSet<EventRsvp> EventRsvps { get; set; }
+    public DbSet<RsvpToken> RsvpTokens { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -149,6 +150,31 @@ public class AppDbContext : DbContext
             entity.HasIndex(e => new { e.EventId, e.UserId }).IsUnique();
             entity.HasIndex(e => e.Response);
             entity.HasIndex(e => e.ResponseDate);
+        });
+
+        // Configure RsvpToken entity
+        modelBuilder.Entity<RsvpToken>(entity =>
+        {
+            entity.ToTable("RsvpTokens");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Token).IsRequired().HasMaxLength(255);
+            entity.HasIndex(e => e.Token).IsUnique();
+            entity.Property(e => e.UsedForResponse).HasMaxLength(20);
+
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Event)
+                .WithMany()
+                .HasForeignKey(e => e.EventId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Ensure one token per user per event
+            entity.HasIndex(e => new { e.EventId, e.UserId }).IsUnique();
+            entity.HasIndex(e => e.ExpiresAt);
+            entity.HasIndex(e => e.CreatedAt);
         });
     }
 }
