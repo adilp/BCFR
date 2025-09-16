@@ -139,6 +139,24 @@ export function timeSpanToTime(timeSpan: string): string {
 }
 
 /**
+ * Format time string (HH:mm) to 12-hour format with AM/PM
+ */
+export function formatTimeTo12Hour(timeString: string): string {
+  if (!timeString) return '';
+
+  const [hoursStr, minutesStr] = timeString.split(':');
+  let hours = parseInt(hoursStr, 10);
+  const minutes = minutesStr || '00';
+
+  if (isNaN(hours)) return timeString;
+
+  const period = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12 || 12; // Convert 0 to 12 for midnight, and 13-23 to 1-11
+
+  return `${hours}:${minutes} ${period}`;
+}
+
+/**
  * Calculate age from date of birth
  */
 export function calculateAge(dateOfBirth: Date | string | null | undefined): number | null {

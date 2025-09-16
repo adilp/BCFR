@@ -3,7 +3,7 @@ import { MapPinIcon, ClockIcon, UserGroupIcon, CalendarIcon, CheckCircleIcon, XC
 import { useState, useEffect } from 'react'
 import { getApiClient } from '@memberorg/api-client'
 import type { Event } from '@memberorg/shared'
-import { formatDateForDisplay } from '@memberorg/shared'
+import { formatDateForDisplay, formatTimeTo12Hour } from '@memberorg/shared'
 import { useAuth } from '../contexts/AuthContext'
 
 interface EventDisplay extends Event {
@@ -106,11 +106,13 @@ const EventsList = ({ events: propEvents, showHeader = true, showDetails = false
   // Helper function to format event for display
   const formatEventForDisplay = (event: Event): EventDisplay => {
     const eventDate = new Date(event.eventDate)
+    const startTime = formatTimeTo12Hour(event.eventTime)
+    const endTime = formatTimeTo12Hour(event.endTime)
     return {
       ...event,
       day: eventDate.getDate().toString(),
       month: eventDate.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
-      time: `${event.eventTime} - ${event.endTime}`
+      time: `${startTime} - ${endTime}`
     }
   }
 
@@ -279,6 +281,12 @@ const EventsList = ({ events: propEvents, showHeader = true, showDetails = false
                     </div>
                   )}
                   
+                  <div className="detail-item">
+                    <CalendarIcon className="detail-icon" />
+                    <span className="detail-label">Date:</span>
+                    <span>{formatDateForDisplay(event.eventDate, { format: 'long' })}</span>
+                  </div>
+
                   {event.time && (
                     <div className="detail-item">
                       <ClockIcon className="detail-icon" />
