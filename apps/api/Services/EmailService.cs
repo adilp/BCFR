@@ -862,8 +862,9 @@ namespace MemberOrgApi.Services
                     };
 
                     await _resend.EmailSendAsync(message);
-                    
-                    // Wait 1 second between emails to stay safely under rate limit
+
+                    // Resend rate limit: 2 requests per second
+                    // Using 1 second delay to be extra safe with rate limiting
                     await Task.Delay(1000);
                 }
                 

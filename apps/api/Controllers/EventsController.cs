@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using MemberOrgApi.Data;
 using MemberOrgApi.Models;
 using MemberOrgApi.DTOs;
@@ -165,7 +166,24 @@ public class EventsController : ControllerBase
         if (evt.Status == "published")
         {
             // Fire and forget - don't wait for emails to send
-            _ = Task.Run(async () => await SendEventAnnouncementEmails(evt));
+            var eventId = evt.Id;
+            var serviceProvider = HttpContext.RequestServices;
+            _ = Task.Run(async () =>
+            {
+                // Create a new scope for the background task
+                using var scope = serviceProvider.CreateScope();
+                var scopedContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                var scopedEmailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
+                var scopedTokenService = scope.ServiceProvider.GetRequiredService<ITokenService>();
+                var scopedLogger = scope.ServiceProvider.GetRequiredService<ILogger<EventsController>>();
+
+                // Reload the event in the new context
+                var eventToProcess = await scopedContext.Events.FindAsync(eventId);
+                if (eventToProcess != null)
+                {
+                    await SendEventAnnouncementEmailsScoped(eventToProcess, scopedContext, scopedEmailService, scopedTokenService, scopedLogger);
+                }
+            });
         }
 
         return CreatedAtAction(nameof(GetEvent), new { id = evt.Id }, dto);
@@ -231,7 +249,24 @@ public class EventsController : ControllerBase
         if (previousStatus != "published" && updateDto.Status == "published")
         {
             // Fire and forget - don't wait for emails to send
-            _ = Task.Run(async () => await SendEventAnnouncementEmails(evt));
+            var eventId = evt.Id;
+            var serviceProvider = HttpContext.RequestServices;
+            _ = Task.Run(async () =>
+            {
+                // Create a new scope for the background task
+                using var scope = serviceProvider.CreateScope();
+                var scopedContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                var scopedEmailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
+                var scopedTokenService = scope.ServiceProvider.GetRequiredService<ITokenService>();
+                var scopedLogger = scope.ServiceProvider.GetRequiredService<ILogger<EventsController>>();
+
+                // Reload the event in the new context
+                var eventToProcess = await scopedContext.Events.FindAsync(eventId);
+                if (eventToProcess != null)
+                {
+                    await SendEventAnnouncementEmailsScoped(eventToProcess, scopedContext, scopedEmailService, scopedTokenService, scopedLogger);
+                }
+            });
         }
 
         return NoContent();
@@ -620,8 +655,9 @@ public class EventsController : ControllerBase
                         _logger.LogWarning("Failed to send event announcement to {Email} for event {EventId}", user.Email, evt.Id);
                     }
 
-                    // Add small delay to respect email service rate limits
-                    await Task.Delay(500);
+                    // Add delay to respect Resend's rate limit (2 requests per second)
+                    // Using 600ms to stay safely under the limit
+                    await Task.Delay(600);
                 }
                 catch (Exception ex)
                 {
@@ -641,6 +677,86 @@ public class EventsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error sending event announcement emails for event {EventId}", evt.Id);
+        }
+    }
+
+    private async Task SendEventAnnouncementEmailsScoped(Event evt, AppDbContext scopedContext, IEmailService scopedEmailService, ITokenService scopedTokenService, ILogger<EventsController> scopedLogger)
+    {
+        try
+        {
+            scopedLogger.LogInformation("Starting to send announcement emails for event: {EventId}", evt.Id);
+
+            // Get all active users (Members and Admins)
+            var users = await scopedContext.Users
+                .Where(u => u.IsActive)
+                .ToListAsync();
+
+            if (!users.Any())
+            {
+                scopedLogger.LogWarning("No active users found to send event announcements");
+                return;
+            }
+
+            var successCount = 0;
+            var failedEmails = new List<string>();
+
+            // Send emails to each user with their unique RSVP token
+            foreach (var user in users)
+            {
+                try
+                {
+                    // Generate unique RSVP token for this user and event
+                    var rsvpToken = await scopedTokenService.GenerateRsvpTokenAsync(user.Id, evt.Id, evt.RsvpDeadline);
+
+                    // Send the announcement email
+                    var emailSent = await scopedEmailService.SendEventAnnouncementEmailAsync(
+                        user.Email,
+                        user.FirstName,
+                        evt.Title,
+                        evt.Description,
+                        evt.EventDate,
+                        evt.StartTime,
+                        evt.EndTime,
+                        evt.Location,
+                        evt.Speaker,
+                        evt.RsvpDeadline,
+                        evt.AllowPlusOne,
+                        rsvpToken.Token
+                    );
+
+                    if (emailSent)
+                    {
+                        successCount++;
+                        scopedLogger.LogInformation("Event announcement sent to {Email} for event {EventId}", user.Email, evt.Id);
+                    }
+                    else
+                    {
+                        failedEmails.Add(user.Email);
+                        scopedLogger.LogWarning("Failed to send event announcement to {Email} for event {EventId}", user.Email, evt.Id);
+                    }
+
+                    // Add delay to respect Resend's rate limit (2 requests per second)
+                    // Using 600ms to stay safely under the limit
+                    await Task.Delay(600);
+                }
+                catch (Exception ex)
+                {
+                    failedEmails.Add(user.Email);
+                    scopedLogger.LogError(ex, "Error sending event announcement to {Email} for event {EventId}", user.Email, evt.Id);
+                }
+            }
+
+            scopedLogger.LogInformation("Event announcement emails sent: {SuccessCount} successful, {FailedCount} failed for event {EventId}",
+                successCount, failedEmails.Count, evt.Id);
+
+            if (failedEmails.Any())
+            {
+                scopedLogger.LogWarning("Failed to send announcements to: {FailedEmails}", string.Join(", ", failedEmails));
+            }
+        }
+        catch (Exception ex)
+        {
+            scopedLogger.LogError(ex, "Error sending event announcement emails for event {EventId}", evt.Id);
         }
     }
 }
