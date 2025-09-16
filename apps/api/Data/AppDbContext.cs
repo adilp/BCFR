@@ -16,6 +16,9 @@ public class AppDbContext : DbContext
     public DbSet<ActivityLog> ActivityLogs { get; set; }
     public DbSet<Event> Events { get; set; }
     public DbSet<EventRsvp> EventRsvps { get; set; }
+    public DbSet<EmailJob> EmailJobs { get; set; }
+    public DbSet<EmailJobRecipient> EmailJobRecipients { get; set; }
+    public DbSet<EmailQuota> EmailQuotas { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

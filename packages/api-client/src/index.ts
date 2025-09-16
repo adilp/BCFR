@@ -18,7 +18,11 @@ import type {
   EmailResponse,
   UserQueryParams,
   EventQueryParams,
-  ApiError
+  ApiError,
+  EmailJob,
+  EmailJobDetail,
+  EmailJobStats,
+  EmailQuota
 } from '@memberorg/shared';
 
 export interface ApiClientOptions {
@@ -293,6 +297,104 @@ export class ApiClient {
       method: 'POST',
       body: JSON.stringify(data),
     });
+  }
+
+  async queueBroadcastEmail(data: EmailRequest): Promise<EmailResponse> {
+    return this.request<EmailResponse>('/adminemail/queue', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Email job endpoints
+  async getEmailJobs(status?: string): Promise<EmailJob[]> {
+    const params = status ? `?status=${status}` : '';
+    return this.request<EmailJob[]>(`/emailjob/list${params}`);
+  }
+
+  async getEmailJob(jobId: string): Promise<EmailJobDetail> {
+    return this.request<EmailJobDetail>(`/emailjob/${jobId}`);
+  }
+
+  async cancelEmailJob(jobId: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/emailjob/${jobId}/cancel`, {
+      method: 'POST',
+    });
+  }
+
+  async pauseEmailJob(jobId: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/emailjob/${jobId}/pause`, {
+      method: 'POST',
+    });
+  }
+
+  async resumeEmailJob(jobId: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/emailjob/${jobId}/resume`, {
+      method: 'POST',
+    });
+  }
+
+  async getEmailJobStats(): Promise<EmailJobStats> {
+    return this.request<EmailJobStats>('/emailjob/stats');
+  }
+
+  async getEmailQuota(): Promise<EmailQuota> {
+    return this.request<EmailQuota>('/emailjob/quota');
+  }
+
+  async sendBroadcastEmailWithProgress(
+    data: EmailRequest,
+    onProgress: (sent: number, total: number) => void
+  ): Promise<boolean> {
+    const token = this.options.getAuthToken();
+    const url = `${this.options.baseURL}/adminemail/send-with-progress`;
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to send emails: ${response.statusText}`);
+    }
+
+    const reader = response.body?.getReader();
+    const decoder = new TextDecoder();
+    
+    if (!reader) {
+      throw new Error('Response body is not readable');
+    }
+
+    let success = false;
+    
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      
+      const chunk = decoder.decode(value);
+      const lines = chunk.split('\n');
+      
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6);
+          try {
+            const progress = JSON.parse(data);
+            onProgress(progress.sent, progress.total);
+            if (progress.complete) {
+              success = progress.success;
+            }
+          } catch (e) {
+            console.error('Failed to parse progress data:', e);
+          }
+        }
+      }
+    }
+    
+    return success;
   }
 
   // Test endpoint

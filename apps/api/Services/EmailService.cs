@@ -876,5 +876,57 @@ namespace MemberOrgApi.Services
                 return false;
             }
         }
+
+        public async Task<bool> SendBroadcastEmailWithProgressAsync(List<string> toEmails, string subject, string bodyContent, bool isHtml, Action<int> onProgress)
+        {
+            try
+            {
+                if (toEmails == null || !toEmails.Any())
+                {
+                    _logger.LogWarning("No recipients specified for broadcast email");
+                    return false;
+                }
+
+                var wrappedHtmlBody = isHtml ? WrapHtmlBody(bodyContent) : null;
+
+                var textBody = System.Text.RegularExpressions.Regex.Replace(bodyContent, "<.*?>", string.Empty);
+                textBody = "Birmingham Committee on Foreign Relations\n\n" + textBody + "\n\n© 2025 BCFR. All rights reserved.";
+
+                int sentCount = 0;
+                
+                // Send individual emails to each recipient to maintain privacy
+                // Add delay to respect Resend's rate limit (2 requests per second)
+                foreach (var toEmail in toEmails)
+                {
+                    var message = new EmailMessage
+                    {
+                        From = _fromName + " <" + _fromEmail + ">",
+                        To = toEmail,
+                        Subject = subject,
+                        HtmlBody = isHtml ? wrappedHtmlBody : null,
+                        TextBody = !isHtml ? bodyContent : textBody
+                    };
+
+                    await _resend.EmailSendAsync(message);
+                    
+                    sentCount++;
+                    onProgress?.Invoke(sentCount);
+                    
+                    // Wait 1 second between emails to stay safely under rate limit
+                    if (sentCount < toEmails.Count) // Don't delay after the last email
+                    {
+                        await Task.Delay(1000);
+                    }
+                }
+                
+                _logger.LogInformation($"Broadcast email sent to {toEmails.Count} individual recipients with subject: {subject}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Failed to send broadcast email to {toEmails.Count} recipients");
+                return false;
+            }
+        }
     }
 }

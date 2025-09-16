@@ -125,6 +125,8 @@ builder.Services.AddScoped<IStripeService, StripeService>();
 
 // Configure Email Service
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IEmailJobService, EmailJobService>();
+builder.Services.AddHostedService<EmailJobProcessor>();
 
 // Register activity log service
 builder.Services.AddScoped<IActivityLogService, ActivityLogService>();

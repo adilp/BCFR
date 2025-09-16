@@ -203,6 +203,56 @@ export interface EmailResponse {
   message: string;
   sentCount?: number;
   failedCount?: number;
+  recipientCount?: number;
+  jobId?: string;
+}
+
+// Email Job Types
+export interface EmailJob {
+  id: string;
+  subject: string;
+  status: 'Pending' | 'Processing' | 'Completed' | 'Failed' | 'Cancelled' | 'Paused';
+  totalRecipients: number;
+  processedCount: number;
+  successCount: number;
+  failedCount: number;
+  scheduledFor?: string;
+  createdAt: string;
+  createdBy?: string;
+  message?: string;
+}
+
+export interface EmailJobDetail extends EmailJob {
+  body: string;
+  isHtml: boolean;
+  startedAt?: string;
+  completedAt?: string;
+  errorMessage?: string;
+  recipients?: EmailRecipientStatus[];
+}
+
+export interface EmailRecipientStatus {
+  email: string;
+  status: string;
+  processedAt?: string;
+  errorMessage?: string;
+}
+
+export interface EmailJobStats {
+  totalJobs: number;
+  pendingJobs: number;
+  processingJobs: number;
+  completedJobs: number;
+  failedJobs: number;
+  totalEmailsSent: number;
+  totalEmailsFailed: number;
+  remainingQuota: number;
+}
+
+export interface EmailQuota {
+  remainingToday: number;
+  dailyLimit: number;
+  usedToday: number;
 }
 
 // Pagination Types

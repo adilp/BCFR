@@ -1,6 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { getApiClient } from '@memberorg/api-client';
-import type { EmailRequest } from '@memberorg/shared';
+import type { EmailRequest, EmailQuota } from '@memberorg/shared';
 import { validateEmail } from '@memberorg/shared';
 import './EmailComposer.css';
 
@@ -15,7 +15,24 @@ const EmailComposer: React.FC<EmailComposerProps> = ({ className = '' }) => {
   const [isHtml, setIsHtml] = useState(true);
   const [sending, setSending] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [sendProgress, setSendProgress] = useState<{ sent: number; total: number } | null>(null);
+  const [quota, setQuota] = useState<EmailQuota | null>(null);
+  const [useQueue, setUseQueue] = useState(true); // Default to using queue
   const editorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    loadQuota();
+  }, []);
+
+  const loadQuota = async () => {
+    try {
+      const apiClient = getApiClient();
+      const quotaData = await apiClient.getEmailQuota();
+      setQuota(quotaData);
+    } catch (error) {
+      console.error('Failed to load email quota:', error);
+    }
+  };
 
   const formatText = (command: string, value?: string) => {
     if (!isHtml) return;
@@ -85,6 +102,7 @@ const EmailComposer: React.FC<EmailComposerProps> = ({ className = '' }) => {
 
     setSending(true);
     setMessage(null);
+    setSendProgress(null);
 
     try {
       const apiClient = getApiClient();
@@ -94,25 +112,59 @@ const EmailComposer: React.FC<EmailComposerProps> = ({ className = '' }) => {
         body,
         isHtml
       };
-      const response = await apiClient.sendBroadcastEmail(emailData);
-
-      if (response.success) {
-        setMessage({ type: 'success', text: response.message });
-        // Clear form
-        setToEmails('');
-        setSubject('');
-        setBody('');
-        if (editorRef.current) {
-          editorRef.current.innerHTML = '';
+      
+      if (useQueue) {
+        // Queue the emails as a job
+        const response = await apiClient.queueBroadcastEmail(emailData);
+        
+        if (response.success) {
+          setMessage({ 
+            type: 'success', 
+            text: `Email job created! ${toEmailList.length} emails will be sent shortly. Job ID: ${response.jobId}` 
+          });
+          // Clear form
+          setToEmails('');
+          setSubject('');
+          setBody('');
+          if (editorRef.current) {
+            editorRef.current.innerHTML = '';
+          }
+          // Reload quota
+          await loadQuota();
+        } else {
+          setMessage({ type: 'error', text: response.message || 'Failed to queue emails' });
         }
       } else {
-        setMessage({ type: 'error', text: response.message || 'Failed to send email' });
+        // Use the direct send with progress tracking
+        const success = await apiClient.sendBroadcastEmailWithProgress(
+          emailData,
+          (sent, total) => {
+            setSendProgress({ sent, total });
+          }
+        );
+
+        if (success) {
+          setMessage({ type: 'success', text: `Successfully sent ${toEmailList.length} email(s)` });
+          // Clear form
+          setToEmails('');
+          setSubject('');
+          setBody('');
+          if (editorRef.current) {
+            editorRef.current.innerHTML = '';
+          }
+          setSendProgress(null);
+          // Reload quota
+          await loadQuota();
+        } else {
+          setMessage({ type: 'error', text: 'Failed to send emails' });
+        }
       }
     } catch (error: any) {
       setMessage({ 
         type: 'error', 
         text: error.message || 'Failed to send email. Please try again.' 
       });
+      setSendProgress(null);
     } finally {
       setSending(false);
     }
@@ -128,6 +180,13 @@ const EmailComposer: React.FC<EmailComposerProps> = ({ className = '' }) => {
             </svg>
             <h2>Compose Email</h2>
           </div>
+          {quota && (
+            <div className="email-quota-info">
+              <span className={`quota-badge ${quota.remainingToday < 20 ? 'quota-low' : ''}`}>
+                {quota.remainingToday} / {quota.dailyLimit} emails remaining today
+              </span>
+            </div>
+          )}
         </div>
 
         {message && (
@@ -140,6 +199,20 @@ const EmailComposer: React.FC<EmailComposerProps> = ({ className = '' }) => {
               )}
             </svg>
             <p>{message.text}</p>
+          </div>
+        )}
+
+        {sendProgress && sending && (
+          <div className="email-progress">
+            <div className="email-progress-bar">
+              <div 
+                className="email-progress-fill" 
+                style={{ width: `${(sendProgress.sent / sendProgress.total) * 100}%` }}
+              />
+            </div>
+            <p className="email-progress-text">
+              Sending email {sendProgress.sent} of {sendProgress.total}...
+            </p>
           </div>
         )}
 
@@ -228,25 +301,42 @@ const EmailComposer: React.FC<EmailComposerProps> = ({ className = '' }) => {
         </div>
 
         <div className="email-composer-footer">
-          <div className="email-footer-info">
-            Emails will be sent individually to each recipient with BCFR template styling
+          <div className="email-footer-options">
+            <label className="email-queue-toggle">
+              <input
+                type="checkbox"
+                checked={useQueue}
+                onChange={(e) => setUseQueue(e.target.checked)}
+                disabled={sending}
+              />
+              <span>Add to queue (recommended for {'>'}10 emails)</span>
+            </label>
+            <div className="email-footer-info">
+              {useQueue 
+                ? 'Emails will be queued and sent automatically in the background'
+                : 'Emails will be sent immediately with live progress'}
+            </div>
           </div>
           <button
             onClick={handleSendEmail}
-            disabled={sending}
+            disabled={sending || (quota && toEmails.split(',').filter(e => e.trim()).length > quota.remainingToday)}
             className="email-send-btn"
           >
             {sending ? (
               <>
                 <span className="spinner"></span>
-                Sending...
+                {sendProgress ? (
+                  <span>Sending {sendProgress.sent} of {sendProgress.total}...</span>
+                ) : (
+                  <span>Sending...</span>
+                )}
               </>
             ) : (
               <>
                 <svg className="send-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                 </svg>
-                Send Email
+                {useQueue ? 'Add to Queue' : 'Send Email'}
               </>
             )}
           </button>

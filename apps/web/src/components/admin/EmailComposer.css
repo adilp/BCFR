@@ -1,4 +1,80 @@
 /* Email Composer Styles */
+
+/* Quota Display */
+.email-quota-info {
+  display: flex;
+  align-items: center;
+}
+
+.quota-badge {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  background: #e7f5ff;
+  color: #1971c2;
+  border: 1px solid #74c0fc;
+}
+
+.quota-badge.quota-low {
+  background: #fff5f5;
+  color: #c92a2a;
+  border-color: #ffa8a8;
+}
+
+/* Queue Toggle */
+.email-footer-options {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.email-queue-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.email-queue-toggle input[type="checkbox"] {
+  cursor: pointer;
+}
+
+.email-queue-toggle span {
+  user-select: none;
+}
+
+/* Progress Bar Styles */
+.email-progress {
+  padding: 16px 24px;
+  background: #f0f7ff;
+  border-bottom: 1px solid #d0e4ff;
+}
+
+.email-progress-bar {
+  width: 100%;
+  height: 8px;
+  background: #e0e7ff;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.email-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4263eb 0%, #5c7cfa 100%);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.email-progress-text {
+  margin: 0;
+  font-size: 14px;
+  color: #4c5e7d;
+  text-align: center;
+}
 .email-composer-container {
   width: 100%;
   max-width: 900px;
@@ -17,6 +93,9 @@
   background: var(--bg-gray);
   padding: 20px 24px;
   border-bottom: 1px solid var(--border-medium);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .email-composer-title {
