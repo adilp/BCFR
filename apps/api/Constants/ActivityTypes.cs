@@ -26,6 +26,7 @@ public static class ActivityTypes
     public const string EventRegistration = "EventRegistration";
     public const string EventCancellation = "EventCancellation";
     public const string EventAttendance = "EventAttendance";
+    public const string EventReminderSent = "EventReminderSent";
     public const string DonationMade = "DonationMade";
     
     public const string RoleChanged = "RoleChanged";

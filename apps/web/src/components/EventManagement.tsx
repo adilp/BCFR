@@ -3,7 +3,7 @@ import EventDetailsDrawer from './EventDetailsDrawer';
 import { getApiClient } from '@memberorg/api-client';
 import type { Event, EventRsvp, CreateEventRequest } from '@memberorg/shared';
 import { formatDateForDisplay } from '@memberorg/shared';
-import { 
+import {
   MagnifyingGlassIcon,
   ChevronRightIcon,
   ChevronDownIcon,
@@ -14,7 +14,8 @@ import {
   CheckCircleIcon,
   XCircleIcon,
   QuestionMarkCircleIcon,
-  TrashIcon
+  TrashIcon,
+  EnvelopeIcon
 } from '@heroicons/react/24/outline';
 import './EventManagement.css';
 
@@ -125,7 +126,7 @@ function EventManagement() {
   const handleExportRsvps = (eventId: string) => {
     const event = events.find(e => e.id === eventId);
     const rsvps = eventRsvps[eventId] || [];
-    
+
     // Create CSV content
     const csvContent = [
       ['Name', 'Email', 'Response', 'Plus One', 'Response Date', 'Checked In'],
@@ -146,6 +147,26 @@ function EventManagement() {
     a.href = url;
     a.download = `${event?.title.replace(/\s+/g, '_')}_rsvps.csv`;
     a.click();
+  };
+
+  const handleEmailNonRsvpUsers = async (eventId: string) => {
+    const event = events.find(e => e.id === eventId);
+    if (!event) return;
+
+    const confirmed = confirm(
+      `This will send a reminder email about the "${event.title}" event to all active users who haven't RSVPed yet. Continue?`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      const apiClient = getApiClient();
+      await apiClient.sendEventReminderToNonRsvps(eventId);
+      alert('Reminder emails have been sent successfully!');
+    } catch (err: any) {
+      console.error('Failed to send reminder emails:', err);
+      alert(err.message || 'Failed to send reminder emails');
+    }
   };
 
   const filteredEvents = events.filter(event => {
@@ -328,13 +349,23 @@ function EventManagement() {
                     <div className="expanded-content">
                       <div className="rsvp-header">
                         <h4>RSVP List</h4>
-                        <button 
-                          className="btn btn-secondary btn-sm"
-                          onClick={() => handleExportRsvps(event.id)}
-                        >
-                          <ArrowDownTrayIcon className="icon-xs" />
-                          Export RSVPs
-                        </button>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => handleExportRsvps(event.id)}
+                          >
+                            <ArrowDownTrayIcon className="icon-xs" />
+                            Export RSVPs
+                          </button>
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => handleEmailNonRsvpUsers(event.id)}
+                            title="Send reminder email to users who haven't RSVPed"
+                          >
+                            <EnvelopeIcon className="icon-xs" />
+                            Remind Non-RSVPs
+                          </button>
+                        </div>
                       </div>
                       
                       <div className="rsvp-table-container">

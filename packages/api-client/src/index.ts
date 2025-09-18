@@ -298,6 +298,12 @@ export class ApiClient {
     });
   }
 
+  async sendEventReminderToNonRsvps(eventId: string): Promise<EmailResponse> {
+    return this.request<EmailResponse>(`/events/${eventId}/remind-non-rsvps`, {
+      method: 'POST',
+    });
+  }
+
   // Test endpoint
   async getHello(): Promise<{ message: string }> {
     return this.request<{ message: string }>('/hello');

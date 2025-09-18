@@ -600,6 +600,90 @@ public class EventsController : ControllerBase
         return true;
     }
 
+    // POST: /events/{id}/remind-non-rsvps - Send reminder emails to users who haven't RSVPed (admin only)
+    [HttpPost("{id}/remind-non-rsvps")]
+    [Authorize(Policy = "AdminOnly")]
+    public async Task<IActionResult> SendReminderToNonRsvpUsers(Guid id)
+    {
+        try
+        {
+            var evt = await _context.Events.FirstOrDefaultAsync(e => e.Id == id);
+            if (evt == null)
+            {
+                return NotFound(new { message = "Event not found" });
+            }
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+            {
+                _logger.LogWarning("User ID not found in claims for remind-non-rsvps request");
+                return Unauthorized(new { message = "User authentication failed" });
+            }
+
+            // Get all active users
+            var allUsers = await _context.Users
+                .Where(u => u.IsActive)
+                .ToListAsync();
+
+            // Get users who have already RSVPed to this event
+            var rsvpedUserIds = await _context.EventRsvps
+                .Where(r => r.EventId == id)
+                .Select(r => r.UserId)
+                .ToListAsync();
+
+            // Filter to get users who haven't RSVPed
+            var nonRsvpUsers = allUsers
+                .Where(u => !rsvpedUserIds.Contains(u.Id))
+                .ToList();
+
+            if (!nonRsvpUsers.Any())
+            {
+                return Ok(new { message = "All active users have already RSVPed to this event", count = 0 });
+            }
+
+            // Store the count before passing to background task
+            var userCount = nonRsvpUsers.Count;
+            var eventTitle = evt.Title;
+
+            // Send reminder emails in background
+            var serviceProvider = HttpContext.RequestServices;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    using var scope = serviceProvider.CreateScope();
+                    var scopedContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                    var scopedEmailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
+                    var scopedTokenService = scope.ServiceProvider.GetRequiredService<ITokenService>();
+                    var scopedLogger = scope.ServiceProvider.GetRequiredService<ILogger<EventsController>>();
+
+                    await SendEventReminderEmailsScoped(evt, nonRsvpUsers, scopedEmailService, scopedTokenService, scopedLogger);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error in background task for sending reminder emails");
+                }
+            });
+
+            await _activityLogService.LogActivityAsync(
+                Guid.Parse(userId),
+                ActivityTypes.EventReminderSent,
+                ActivityCategories.Communication,
+                $"Sent reminder emails for event '{eventTitle}' to {userCount} non-RSVP users"
+            );
+
+            return Ok(new {
+                message = $"Reminder emails are being sent to {userCount} users who haven't RSVPed",
+                count = userCount
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in SendReminderToNonRsvpUsers for event {EventId}", id);
+            return StatusCode(500, new { message = "An error occurred while sending reminder emails" });
+        }
+    }
+
     private async Task SendEventAnnouncementEmails(Event evt)
     {
         try
@@ -757,6 +841,76 @@ public class EventsController : ControllerBase
         catch (Exception ex)
         {
             scopedLogger.LogError(ex, "Error sending event announcement emails for event {EventId}", evt.Id);
+        }
+    }
+
+    private async Task SendEventReminderEmailsScoped(Event evt, List<User> users, IEmailService scopedEmailService, ITokenService scopedTokenService, ILogger<EventsController> scopedLogger)
+    {
+        try
+        {
+            scopedLogger.LogInformation("Starting to send reminder emails for event {EventId} to {UserCount} non-RSVP users",
+                evt.Id, users.Count);
+
+            var successCount = 0;
+            var failedEmails = new List<string>();
+
+            // Send reminder emails to each user with their unique RSVP token
+            foreach (var user in users)
+            {
+                try
+                {
+                    // Generate unique RSVP token for this user and event
+                    var rsvpToken = await scopedTokenService.GenerateRsvpTokenAsync(user.Id, evt.Id, evt.RsvpDeadline);
+
+                    // Send the reminder email (reusing the announcement email template)
+                    var emailSent = await scopedEmailService.SendEventAnnouncementEmailAsync(
+                        user.Email,
+                        user.FirstName,
+                        evt.Title,
+                        evt.Description,
+                        evt.EventDate,
+                        evt.StartTime,
+                        evt.EndTime,
+                        evt.Location,
+                        evt.Speaker,
+                        evt.RsvpDeadline,
+                        evt.AllowPlusOne,
+                        rsvpToken.Token
+                    );
+
+                    if (emailSent)
+                    {
+                        successCount++;
+                        scopedLogger.LogInformation("Reminder email sent to {Email} for event {EventId}", user.Email, evt.Id);
+                    }
+                    else
+                    {
+                        failedEmails.Add(user.Email);
+                        scopedLogger.LogWarning("Failed to send reminder email to {Email} for event {EventId}", user.Email, evt.Id);
+                    }
+
+                    // Add delay to respect Resend's rate limit (2 requests per second)
+                    // Using 600ms to stay safely under the limit
+                    await Task.Delay(600);
+                }
+                catch (Exception ex)
+                {
+                    failedEmails.Add(user.Email);
+                    scopedLogger.LogError(ex, "Error sending reminder email to {Email} for event {EventId}", user.Email, evt.Id);
+                }
+            }
+
+            scopedLogger.LogInformation("Event reminder emails sent: {SuccessCount} successful, {FailedCount} failed for event {EventId}",
+                successCount, failedEmails.Count, evt.Id);
+
+            if (failedEmails.Any())
+            {
+                scopedLogger.LogWarning("Failed to send reminders to: {FailedEmails}", string.Join(", ", failedEmails));
+            }
+        }
+        catch (Exception ex)
+        {
+            scopedLogger.LogError(ex, "Error sending event reminder emails for event {EventId}", evt.Id);
         }
     }
 }
