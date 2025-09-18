@@ -134,6 +134,8 @@ builder.Services.AddScoped<IActivityLogService, ActivityLogService>();
 builder.Services.AddHttpContextAccessor();
 // Email Queue service (Phase 1)
 builder.Services.AddScoped<IEmailQueueService, EmailQueueService>();
+// Email background worker (Phase 2)
+builder.Services.AddHostedService<EmailBackgroundService>();
 
 var app = builder.Build();
 
