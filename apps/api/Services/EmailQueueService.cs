@@ -65,5 +65,45 @@ public class EmailQueueService : IEmailQueueService
     {
         return await _db.EmailQueue.FirstOrDefaultAsync(e => e.Id == id);
     }
-}
 
+    public async Task<Guid> QueueCampaignAsync(string campaignName, string campaignType, List<EmailRecipient> recipients, string subject, string htmlBody)
+    {
+        var campaign = new EmailCampaign
+        {
+            Id = Guid.NewGuid(),
+            Name = campaignName,
+            Type = campaignType,
+            Status = "Active",
+            TotalRecipients = recipients.Count,
+            CreatedAt = DateTime.UtcNow
+        };
+        _db.EmailCampaigns.Add(campaign);
+
+        // Deduplicate by normalized email (lower-trim)
+        var distinctRecipients = recipients
+            .GroupBy(r => r.Email.Trim().ToLowerInvariant())
+            .Select(g => g.First())
+            .ToList();
+
+        foreach (var r in distinctRecipients)
+        {
+            _db.EmailQueue.Add(new EmailQueueItem
+            {
+                Id = Guid.NewGuid(),
+                CampaignId = campaign.Id,
+                RecipientEmail = r.Email.Trim(),
+                RecipientName = r.Name,
+                Subject = subject,
+                HtmlBody = htmlBody,
+                Status = "Pending",
+                Priority = 1,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            });
+        }
+
+        await _db.SaveChangesAsync();
+        _logger.LogInformation("Queued {Count} emails for campaign {Campaign}", distinctRecipients.Count, campaign.Id);
+        return campaign.Id;
+    }
+}
