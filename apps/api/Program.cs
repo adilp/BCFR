@@ -132,6 +132,8 @@ builder.Services.AddScoped<ITokenService, TokenService>();
 // Register activity log service
 builder.Services.AddScoped<IActivityLogService, ActivityLogService>();
 builder.Services.AddHttpContextAccessor();
+// Email Queue service (Phase 1)
+builder.Services.AddScoped<IEmailQueueService, EmailQueueService>();
 
 var app = builder.Build();
 

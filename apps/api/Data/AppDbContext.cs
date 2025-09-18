@@ -17,6 +17,8 @@ public class AppDbContext : DbContext
     public DbSet<Event> Events { get; set; }
     public DbSet<EventRsvp> EventRsvps { get; set; }
     public DbSet<RsvpToken> RsvpTokens { get; set; }
+    public DbSet<EmailCampaign> EmailCampaigns { get; set; }
+    public DbSet<EmailQueueItem> EmailQueue { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -175,6 +177,53 @@ public class AppDbContext : DbContext
             entity.HasIndex(e => new { e.EventId, e.UserId }).IsUnique();
             entity.HasIndex(e => e.ExpiresAt);
             entity.HasIndex(e => e.CreatedAt);
+        });
+
+        // Configure EmailCampaign entity
+        modelBuilder.Entity<EmailCampaign>(entity =>
+        {
+            entity.ToTable("EmailCampaigns");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.Type).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.Status).IsRequired().HasMaxLength(20).HasDefaultValue("Active");
+            entity.Property(e => e.CreatedBy).HasMaxLength(255);
+            entity.Property(e => e.Metadata).HasColumnType("jsonb");
+
+            entity.HasIndex(e => e.Status);
+            entity.HasIndex(e => e.CreatedAt).HasDatabaseName("IX_EmailCampaigns_CreatedAt");
+        });
+
+        // Configure EmailQueueItem entity
+        modelBuilder.Entity<EmailQueueItem>(entity =>
+        {
+            entity.ToTable("EmailQueue");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.RecipientEmail).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.RecipientName).HasMaxLength(255);
+            entity.Property(e => e.Subject).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.PlainTextBody).HasColumnType("text");
+            entity.Property(e => e.HtmlBody).IsRequired().HasColumnType("text");
+            entity.Property(e => e.Status).IsRequired().HasMaxLength(20).HasDefaultValue("Pending");
+            entity.Property(e => e.Priority).IsRequired().HasDefaultValue(1);
+            entity.Property(e => e.ProviderMessageId).HasMaxLength(255);
+
+            entity.HasOne(e => e.Campaign)
+                .WithMany()
+                .HasForeignKey(e => e.CampaignId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            // Unique dedupe per campaign
+            entity.HasIndex(e => new { e.CampaignId, e.RecipientEmail })
+                .IsUnique()
+                .HasDatabaseName("UQ_Campaign_Recipient");
+
+            // Processing index (partial equivalent via filtered index in Postgres)
+            entity.HasIndex(e => new { e.Status, e.ScheduledFor, e.NextRetryAt })
+                .HasDatabaseName("IX_EmailQueue_Processing");
+
+            entity.HasIndex(e => e.CampaignId).HasDatabaseName("IX_EmailQueue_CampaignId");
+            entity.HasIndex(e => e.UpdatedAt).HasDatabaseName("IX_EmailQueue_UpdatedAt");
         });
     }
 }
