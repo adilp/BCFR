@@ -935,28 +935,50 @@ public class EventsController : ControllerBase
 
     private async Task ScheduleEventReminderJobs(Event evt)
     {
-        // Schedule ONLY 1 day before, at 9:00 AM Central
+        // Schedule two jobs:
+        // 1) 2 days before RSVP deadline (non-RSVP users, with RSVP buttons)
+        // 2) 1 day before event (attendee reminder to YES RSVPs, no RSVP buttons)
+
         var central = TimeZoneInfo.FindSystemTimeZoneById("America/Chicago");
         var eventDateCentral = TimeZoneInfo.ConvertTimeFromUtc(evt.EventDate, central).Date;
+        var rsvpDeadlineCentral = TimeZoneInfo.ConvertTimeFromUtc(evt.RsvpDeadline, central).Date;
 
         DateTime ToUtcCentral(DateTime local) => TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(local, DateTimeKind.Unspecified), central);
-        var finalReminderLocal = eventDateCentral.AddDays(-1).AddHours(9);
-        var whenUtc = ToUtcCentral(finalReminderLocal);
 
-        var scheduledFor = whenUtc < DateTime.UtcNow ? DateTime.UtcNow.AddMinutes(1) : whenUtc;
+        // 2 days before RSVP deadline at 9:00 AM CT
+        var deadlineReminderLocal = rsvpDeadlineCentral.AddDays(-2).AddHours(9);
+        var deadlineWhenUtc = ToUtcCentral(deadlineReminderLocal);
+        var deadlineScheduledFor = deadlineWhenUtc < DateTime.UtcNow ? DateTime.UtcNow.AddMinutes(1) : deadlineWhenUtc;
+
         _context.ScheduledEmailJobs.Add(new ScheduledEmailJob
         {
-            JobType = "EventFinalReminder",
+            JobType = "EventRsvpDeadlineReminder",
             EntityType = "Event",
             EntityId = evt.Id.ToString(),
-            ScheduledFor = scheduledFor,
+            ScheduledFor = deadlineScheduledFor,
+            Status = "Active",
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        });
+
+        // 1 day before event at 9:00 AM CT
+        var attendeeReminderLocal = eventDateCentral.AddDays(-1).AddHours(9);
+        var attendeeWhenUtc = ToUtcCentral(attendeeReminderLocal);
+        var attendeeScheduledFor = attendeeWhenUtc < DateTime.UtcNow ? DateTime.UtcNow.AddMinutes(1) : attendeeWhenUtc;
+
+        _context.ScheduledEmailJobs.Add(new ScheduledEmailJob
+        {
+            JobType = "EventAttendeeReminder",
+            EntityType = "Event",
+            EntityId = evt.Id.ToString(),
+            ScheduledFor = attendeeScheduledFor,
             Status = "Active",
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         });
 
         await _context.SaveChangesAsync();
-        _logger.LogInformation("Scheduled 1-day-before reminder job for event {EventId}", evt.Id);
+        _logger.LogInformation("Scheduled RSVP deadline and attendee reminder jobs for event {EventId}", evt.Id);
     }
 
     private string BuildEventEmailHtml(Event evt, string firstName, string rsvpToken, string header = "Upcoming Event Reminder")

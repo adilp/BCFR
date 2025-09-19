@@ -85,7 +85,19 @@ public class EmailBackgroundService : BackgroundService
                         // Resolve scoped dependencies
                         var tokenService = scopedProvider.GetRequiredService<ITokenService>();
                         var config = scopedProvider.GetRequiredService<IConfiguration>();
-                        await CreateEventReminderEmailsFromJob(db, job, tokenService, config, ct);
+                        if (job.JobType == "EventAttendeeReminder")
+                        {
+                            await CreateEventAttendeeReminderEmailsFromJob(db, job, config, ct);
+                        }
+                        else if (job.JobType == "EventRsvpDeadlineReminder")
+                        {
+                            await CreateEventRsvpDeadlineReminderEmailsFromJob(db, job, tokenService, config, ct);
+                        }
+                        else
+                        {
+                            // Back-compat: treat unknown as non-RSVP reminder
+                            await CreateEventRsvpDeadlineReminderEmailsFromJob(db, job, tokenService, config, ct);
+                        }
                         break;
                     default:
                         _logger.LogWarning("Unknown ScheduledEmailJob EntityType={EntityType} Id={JobId}", job.EntityType, job.Id);
@@ -126,7 +138,8 @@ public class EmailBackgroundService : BackgroundService
         };
     }
 
-    private async Task CreateEventReminderEmailsFromJob(AppDbContext db, ScheduledEmailJob job, ITokenService tokenService, IConfiguration config, CancellationToken ct)
+    // Two days before RSVP deadline: remind non-RSVP users with RSVP buttons
+    private async Task CreateEventRsvpDeadlineReminderEmailsFromJob(AppDbContext db, ScheduledEmailJob job, ITokenService tokenService, IConfiguration config, CancellationToken ct)
     {
         if (!Guid.TryParse(job.EntityId, out var eventId))
         {
@@ -141,8 +154,8 @@ public class EmailBackgroundService : BackgroundService
         var campaign = new EmailCampaign
         {
             Id = Guid.NewGuid(),
-            Name = $"{job.JobType} - {evt.Title}",
-            Type = job.JobType,
+            Name = $"RSVP Deadline Reminder - {evt.Title}",
+            Type = "EventRsvpDeadlineReminder",
             Status = "Active",
             CreatedAt = DateTime.UtcNow
         };
@@ -159,7 +172,7 @@ public class EmailBackgroundService : BackgroundService
         foreach (var user in nonRsvpUsers)
         {
             var token = await tokenService.GenerateRsvpTokenAsync(user.Id, evt.Id, evt.RsvpDeadline);
-            var htmlBody = BuildEventEmailHtml(config, evt, user.FirstName, token.Token);
+            var htmlBody = BuildDeadlineReminderHtml(config, evt, user.FirstName, token.Token);
 
             db.EmailQueue.Add(new EmailQueueItem
             {
@@ -167,7 +180,7 @@ public class EmailBackgroundService : BackgroundService
                 CampaignId = campaign.Id,
                 RecipientEmail = user.Email,
                 RecipientName = $"{user.FirstName} {user.LastName}",
-                Subject = $"Reminder: {evt.Title} is coming up!",
+                Subject = $"RSVP Reminder: {evt.Title} — Respond by {TimeZoneInfo.ConvertTimeFromUtc(evt.RsvpDeadline, TimeZoneInfo.FindSystemTimeZoneById("America/Chicago")).ToString("ddd, MMM d")}",
                 HtmlBody = htmlBody,
                 Status = "Pending",
                 Priority = 1,
@@ -178,10 +191,10 @@ public class EmailBackgroundService : BackgroundService
 
         campaign.TotalRecipients = nonRsvpUsers.Count;
         await db.SaveChangesAsync(ct);
-        _logger.LogInformation("Queued {Count} reminder emails for event {EventId} via ScheduledJob {JobId}", nonRsvpUsers.Count, evt.Id, job.Id);
+        _logger.LogInformation("Queued {Count} RSVP deadline reminders for event {EventId} via ScheduledJob {JobId}", nonRsvpUsers.Count, evt.Id, job.Id);
     }
 
-    private static string BuildEventEmailHtml(IConfiguration configuration, Event evt, string firstName, string rsvpToken)
+    private static string BuildDeadlineReminderHtml(IConfiguration configuration, Event evt, string firstName, string rsvpToken)
     {
         var apiBase = configuration["App:ApiUrl"] ?? "http://localhost:5001/api";
         var yesUrl = $"{apiBase}/email-rsvp/respond?token={Uri.EscapeDataString(rsvpToken)}&response=yes";
@@ -193,20 +206,22 @@ public class EmailBackgroundService : BackgroundService
         var central = TimeZoneInfo.FindSystemTimeZoneById("America/Chicago");
         var eventDateLocal = TimeZoneInfo.ConvertTimeFromUtc(evt.EventDate, central);
         var dateStr = eventDateLocal.ToString("dddd, MMMM dd, yyyy");
+        var deadlineLocal = TimeZoneInfo.ConvertTimeFromUtc(evt.RsvpDeadline, central);
+        var deadlineStr = deadlineLocal.ToString("dddd, MMM d, h:mm tt") + " CT";
         var start = DateTime.Today.Add(evt.StartTime).ToString("h:mm tt");
         var end = DateTime.Today.Add(evt.EndTime).ToString("h:mm tt");
 
         return $@"<!DOCTYPE html>
         <html>
-        <head><meta charset='utf-8' /><title>{evt.Title} - Reminder</title></head>
+        <head><meta charset='utf-8' /><title>{evt.Title} - RSVP Deadline Reminder</title></head>
         <body style='font-family: -apple-system, BlinkMacSystemFont, Inter, Segoe UI, Roboto, sans-serif; background: #fdf8f1; padding: 24px; color: #212529;'>
           <div style='max-width:600px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.07)'>
             <div style='background:#6B3AA0;color:#fff;padding:20px'>
-              <h1 style='margin:0;font-size:22px'>Upcoming Event Reminder</h1>
+              <h1 style='margin:0;font-size:22px'>RSVP Deadline Approaching</h1>
             </div>
             <div style='padding:24px'>
               <p style='margin-top:0'>Hello {firstName},</p>
-              <p>Reminder for <strong>{evt.Title}</strong>.</p>
+              <p>Please RSVP for <strong>{evt.Title}</strong>. The RSVP deadline is <strong>{deadlineStr}</strong>.</p>
               <ul>
                 <li><strong>Date:</strong> {dateStr}</li>
                 <li><strong>Time:</strong> {start} – {end} CT</li>
@@ -225,6 +240,91 @@ public class EmailBackgroundService : BackgroundService
                 {(yesWithGuestUrl != null ? $"Yes + Guest: {yesWithGuestUrl}<br/>" : "")}
                 No: {noUrl}
               </p>
+            </div>
+            <div style='background:#F5F2ED;color:#6b7280;padding:16px;text-align:center;font-size:12px'>
+              Birmingham Committee on Foreign Relations
+            </div>
+          </div>
+        </body>
+        </html>";
+    }
+
+    // One day before event: remind attendees who RSVPed YES (no RSVP buttons)
+    private async Task CreateEventAttendeeReminderEmailsFromJob(AppDbContext db, ScheduledEmailJob job, IConfiguration config, CancellationToken ct)
+    {
+        if (!Guid.TryParse(job.EntityId, out var eventId)) return;
+        var evt = await db.Events.FirstOrDefaultAsync(e => e.Id == eventId, ct);
+        if (evt == null) return;
+
+        var yesRsvpUserIds = await db.EventRsvps
+            .Where(r => r.EventId == evt.Id && r.Response == "yes")
+            .Select(r => r.UserId)
+            .ToListAsync(ct);
+
+        if (yesRsvpUserIds.Count == 0) return;
+
+        var users = await db.Users.Where(u => yesRsvpUserIds.Contains(u.Id)).ToListAsync(ct);
+
+        var campaign = new EmailCampaign
+        {
+            Id = Guid.NewGuid(),
+            Name = $"Attendee Reminder - {evt.Title}",
+            Type = "EventAttendeeReminder",
+            Status = "Active",
+            CreatedAt = DateTime.UtcNow
+        };
+        db.EmailCampaigns.Add(campaign);
+        await db.SaveChangesAsync(ct);
+
+        foreach (var user in users)
+        {
+            var htmlBody = BuildAttendeeReminderHtml(config, evt, user.FirstName);
+            db.EmailQueue.Add(new EmailQueueItem
+            {
+                Id = Guid.NewGuid(),
+                CampaignId = campaign.Id,
+                RecipientEmail = user.Email,
+                RecipientName = $"{user.FirstName} {user.LastName}",
+                Subject = $"Reminder: {evt.Title} is tomorrow",
+                HtmlBody = htmlBody,
+                Status = "Pending",
+                Priority = 1,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            });
+        }
+
+        campaign.TotalRecipients = users.Count;
+        await db.SaveChangesAsync(ct);
+        _logger.LogInformation("Queued {Count} attendee reminders for event {EventId} via ScheduledJob {JobId}", users.Count, evt.Id, job.Id);
+    }
+
+    private static string BuildAttendeeReminderHtml(IConfiguration configuration, Event evt, string firstName)
+    {
+        var central = TimeZoneInfo.FindSystemTimeZoneById("America/Chicago");
+        var eventDateLocal = TimeZoneInfo.ConvertTimeFromUtc(evt.EventDate, central);
+        var dateStr = eventDateLocal.ToString("dddd, MMMM dd, yyyy");
+        var start = DateTime.Today.Add(evt.StartTime).ToString("h:mm tt");
+        var end = DateTime.Today.Add(evt.EndTime).ToString("h:mm tt");
+
+        return $@"<!DOCTYPE html>
+        <html>
+        <head><meta charset='utf-8' /><title>{evt.Title} - Attendee Reminder</title></head>
+        <body style='font-family: -apple-system, BlinkMacSystemFont, Inter, Segoe UI, Roboto, sans-serif; background: #fdf8f1; padding: 24px; color: #212529;'>
+          <div style='max-width:600px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.07)'>
+            <div style='background:#6B3AA0;color:#fff;padding:20px'>
+              <h1 style='margin:0;font-size:22px'>Event Reminder</h1>
+            </div>
+            <div style='padding:24px'>
+              <p style='margin-top:0'>Hello {firstName},</p>
+              <p>This is a reminder that you RSVP'd <strong>YES</strong> for <strong>{evt.Title}</strong>. We look forward to seeing you there!</p>
+              <ul>
+                <li><strong>Date:</strong> {dateStr}</li>
+                <li><strong>Time:</strong> {start} – {end} CT</li>
+                <li><strong>Location:</strong> {evt.Location}</li>
+                <li><strong>Speaker:</strong> {evt.Speaker}</li>
+              </ul>
+              <p style='color:#6b7280;font-size:14px'>If your plans change, please update your RSVP from your account.</p>
             </div>
             <div style='background:#F5F2ED;color:#6b7280;padding:16px;text-align:center;font-size:12px'>
               Birmingham Committee on Foreign Relations
