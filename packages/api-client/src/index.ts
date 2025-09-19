@@ -304,6 +304,31 @@ export class ApiClient {
     });
   }
 
+  // Email queue/campaigns/scheduling (admin)
+  async getEmailCampaigns(): Promise<any[]> {
+    return this.request<any[]>('/admin/emails/campaigns');
+  }
+
+  async getEmailCampaign(id: string): Promise<any> {
+    return this.request<any>(`/admin/emails/campaigns/${id}`);
+  }
+
+  async getEmailQueue(params?: { status?: string; take?: number }): Promise<any[]> {
+    const qp = new URLSearchParams();
+    if (params?.status) qp.append('status', params.status);
+    if (params?.take) qp.append('take', params.take.toString());
+    const query = qp.toString();
+    return this.request<any[]>(`/admin/emails/queue${query ? `?${query}` : ''}`);
+  }
+
+  async getScheduledEmailJobs(params?: { status?: string; take?: number }): Promise<any[]> {
+    const qp = new URLSearchParams();
+    if (params?.status) qp.append('status', params.status);
+    if (params?.take) qp.append('take', params.take.toString());
+    const query = qp.toString();
+    return this.request<any[]>(`/admin/emails/scheduled-jobs${query ? `?${query}` : ''}`);
+  }
+
   // Test endpoint
   async getHello(): Promise<{ message: string }> {
     return this.request<{ message: string }>('/hello');

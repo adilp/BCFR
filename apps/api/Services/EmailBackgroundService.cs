@@ -34,7 +34,7 @@ public class EmailBackgroundService : BackgroundService
                 var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
                 var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
 
-                await ProcessScheduledJobsAsync(db, stoppingToken);
+                await ProcessScheduledJobsAsync(db, scope.ServiceProvider, stoppingToken);
                 await ProcessQueueAsync(db, emailService, stoppingToken);
             }
             catch (Exception ex)
@@ -53,7 +53,7 @@ public class EmailBackgroundService : BackgroundService
         }
     }
 
-    private async Task ProcessScheduledJobsAsync(AppDbContext db, CancellationToken ct)
+    private async Task ProcessScheduledJobsAsync(AppDbContext db, IServiceProvider scopedProvider, CancellationToken ct)
     {
         var now = DateTime.UtcNow;
 
@@ -82,7 +82,10 @@ public class EmailBackgroundService : BackgroundService
                 switch (job.EntityType)
                 {
                     case "Event":
-                        await CreateEventReminderEmailsFromJob(db, job, ct);
+                        // Resolve scoped dependencies
+                        var tokenService = scopedProvider.GetRequiredService<ITokenService>();
+                        var config = scopedProvider.GetRequiredService<IConfiguration>();
+                        await CreateEventReminderEmailsFromJob(db, job, tokenService, config, ct);
                         break;
                     default:
                         _logger.LogWarning("Unknown ScheduledEmailJob EntityType={EntityType} Id={JobId}", job.EntityType, job.Id);
@@ -123,7 +126,7 @@ public class EmailBackgroundService : BackgroundService
         };
     }
 
-    private async Task CreateEventReminderEmailsFromJob(AppDbContext db, ScheduledEmailJob job, CancellationToken ct)
+    private async Task CreateEventReminderEmailsFromJob(AppDbContext db, ScheduledEmailJob job, ITokenService tokenService, IConfiguration config, CancellationToken ct)
     {
         if (!Guid.TryParse(job.EntityId, out var eventId))
         {
@@ -152,10 +155,6 @@ public class EmailBackgroundService : BackgroundService
         var nonRsvpUsers = allUsers.Where(u => !rsvpedUserIds.Contains(u.Id)).ToList();
 
         if (nonRsvpUsers.Count == 0) return;
-
-        // Need token service and configuration for links
-        var tokenService = _serviceProvider.GetRequiredService<ITokenService>();
-        var config = _serviceProvider.GetRequiredService<IConfiguration>();
 
         foreach (var user in nonRsvpUsers)
         {

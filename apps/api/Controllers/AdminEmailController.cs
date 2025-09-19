@@ -17,11 +17,13 @@ namespace MemberOrgApi.Controllers
     public class AdminEmailController : ControllerBase
     {
         private readonly IEmailService _emailService;
+        private readonly IEmailQueueService _emailQueueService;
         private readonly ILogger<AdminEmailController> _logger;
 
-        public AdminEmailController(IEmailService emailService, ILogger<AdminEmailController> logger)
+        public AdminEmailController(IEmailService emailService, IEmailQueueService emailQueueService, ILogger<AdminEmailController> logger)
         {
             _emailService = emailService;
+            _emailQueueService = emailQueueService;
             _logger = logger;
         }
 
@@ -76,34 +78,36 @@ namespace MemberOrgApi.Controllers
                     });
                 }
 
-                var result = await _emailService.SendBroadcastEmailAsync(
-                    request.ToEmails,
-                    request.Subject,
-                    request.Body,
-                    request.IsHtml
+                // Build recipients list (dedupe by normalized email)
+                var recipients = request.ToEmails
+                    .Select(e => e.Trim())
+                    .Where(e => !string.IsNullOrWhiteSpace(e))
+                    .GroupBy(e => e.ToLowerInvariant())
+                    .Select(g => new EmailRecipient { Email = g.First(), Name = null })
+                    .ToList();
+
+                // Ensure HTML body; if plain text provided, wrap it
+                var htmlBody = request.IsHtml
+                    ? request.Body
+                    : $"<pre style=\"font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', 'Roboto', monospace; white-space: pre-wrap;\">{System.Net.WebUtility.HtmlEncode(request.Body)}</pre>";
+
+                var campaignId = await _emailQueueService.QueueCampaignAsync(
+                    campaignName: $"One-off Broadcast - {DateTime.UtcNow:yyyy-MM-dd HH:mm} UTC",
+                    campaignType: "Broadcast",
+                    recipients: recipients,
+                    subject: request.Subject,
+                    htmlBody: htmlBody
                 );
 
-                if (result)
+                var totalRecipients = recipients.Count;
+                _logger.LogInformation("Queued broadcast campaign {CampaignId} to {Count} recipients", campaignId, totalRecipients);
+
+                return Ok(new SendEmailResponse
                 {
-                    var totalRecipients = request.ToEmails.Count;
-                    
-                    _logger.LogInformation($"Admin sent individual emails to {totalRecipients} recipients with subject: {request.Subject}");
-                    
-                    return Ok(new SendEmailResponse
-                    {
-                        Success = true,
-                        Message = $"Email successfully sent individually to {totalRecipients} recipient(s)",
-                        RecipientCount = totalRecipients
-                    });
-                }
-                else
-                {
-                    return StatusCode(500, new SendEmailResponse
-                    {
-                        Success = false,
-                        Message = "Failed to send email. Please try again later."
-                    });
-                }
+                    Success = true,
+                    Message = $"Email queued to {totalRecipients} recipient(s) (Campaign {campaignId})",
+                    RecipientCount = totalRecipients
+                });
             }
             catch (Exception ex)
             {

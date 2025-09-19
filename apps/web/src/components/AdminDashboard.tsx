@@ -3,6 +3,9 @@ import Navigation from './Navigation';
 import UserManagement from './UserManagement';
 import EventManagement from './EventManagement';
 import EmailComposer from './admin/EmailComposer';
+import EmailCampaignsList from './admin/EmailCampaignsList';
+import EmailQueueList from './admin/EmailQueueList';
+import ScheduledEmailJobsList from './admin/ScheduledEmailJobsList';
 import { 
   ArrowTrendingUpIcon,
   ArrowTrendingDownIcon
@@ -15,9 +18,11 @@ import {
 import './AdminDashboard.css';
 
 type AdminView = 'overview' | 'users' | 'events' | 'finances' | 'reports' | 'email';
+type EmailSubView = 'compose' | 'campaigns' | 'queue' | 'scheduled';
 
 function AdminDashboard() {
   const [currentView, setCurrentView] = useState<AdminView>('overview');
+  const [emailView, setEmailView] = useState<EmailSubView>('compose');
 
   const renderContent = () => {
     switch (currentView) {
@@ -28,7 +33,16 @@ function AdminDashboard() {
       case 'email':
         return (
           <div style={{ maxWidth: '1200px' }}>
-            <EmailComposer />
+            <div className="admin-tabs" style={{ justifyContent: 'flex-start', marginTop: '-8px' }}>
+              <button className={`admin-tab ${emailView === 'compose' ? 'active' : ''}`} onClick={() => setEmailView('compose')}>Compose</button>
+              <button className={`admin-tab ${emailView === 'campaigns' ? 'active' : ''}`} onClick={() => setEmailView('campaigns')}>Campaigns</button>
+              <button className={`admin-tab ${emailView === 'queue' ? 'active' : ''}`} onClick={() => setEmailView('queue')}>Queue</button>
+              <button className={`admin-tab ${emailView === 'scheduled' ? 'active' : ''}`} onClick={() => setEmailView('scheduled')}>Scheduled</button>
+            </div>
+            {emailView === 'compose' && <EmailComposer />}
+            {emailView === 'campaigns' && <EmailCampaignsList />}
+            {emailView === 'queue' && <EmailQueueList />}
+            {emailView === 'scheduled' && <ScheduledEmailJobsList />}
           </div>
         );
       case 'events':
