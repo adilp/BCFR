@@ -173,6 +173,7 @@ public class EventsController : ControllerBase
         if (evt.Status == "published")
         {
             await QueueEventAnnouncementCampaign(evt);
+            await ScheduleEventReminderJobs(evt);
         }
 
         return CreatedAtAction(nameof(GetEvent), new { id = evt.Id }, dto);
@@ -238,6 +239,7 @@ public class EventsController : ControllerBase
         if (previousStatus != "published" && updateDto.Status == "published")
         {
             await QueueEventAnnouncementCampaign(evt);
+            await ScheduleEventReminderJobs(evt);
         }
 
         return NoContent();
@@ -929,6 +931,32 @@ public class EventsController : ControllerBase
         await _context.SaveChangesAsync();
 
         _logger.LogInformation("Queued announcement campaign {CampaignId} for event {EventId} with {Count} recipients", campaign.Id, evt.Id, count);
+    }
+
+    private async Task ScheduleEventReminderJobs(Event evt)
+    {
+        // Schedule ONLY 1 day before, at 9:00 AM Central
+        var central = TimeZoneInfo.FindSystemTimeZoneById("America/Chicago");
+        var eventDateCentral = TimeZoneInfo.ConvertTimeFromUtc(evt.EventDate, central).Date;
+
+        DateTime ToUtcCentral(DateTime local) => TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(local, DateTimeKind.Unspecified), central);
+        var finalReminderLocal = eventDateCentral.AddDays(-1).AddHours(9);
+        var whenUtc = ToUtcCentral(finalReminderLocal);
+
+        var scheduledFor = whenUtc < DateTime.UtcNow ? DateTime.UtcNow.AddMinutes(1) : whenUtc;
+        _context.ScheduledEmailJobs.Add(new ScheduledEmailJob
+        {
+            JobType = "EventFinalReminder",
+            EntityType = "Event",
+            EntityId = evt.Id.ToString(),
+            ScheduledFor = scheduledFor,
+            Status = "Active",
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        });
+
+        await _context.SaveChangesAsync();
+        _logger.LogInformation("Scheduled 1-day-before reminder job for event {EventId}", evt.Id);
     }
 
     private string BuildEventEmailHtml(Event evt, string firstName, string rsvpToken, string header = "Upcoming Event Reminder")

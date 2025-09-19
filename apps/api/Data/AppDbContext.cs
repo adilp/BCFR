@@ -19,6 +19,7 @@ public class AppDbContext : DbContext
     public DbSet<RsvpToken> RsvpTokens { get; set; }
     public DbSet<EmailCampaign> EmailCampaigns { get; set; }
     public DbSet<EmailQueueItem> EmailQueue { get; set; }
+    public DbSet<ScheduledEmailJob> ScheduledEmailJobs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -224,6 +225,22 @@ public class AppDbContext : DbContext
 
             entity.HasIndex(e => e.CampaignId).HasDatabaseName("IX_EmailQueue_CampaignId");
             entity.HasIndex(e => e.UpdatedAt).HasDatabaseName("IX_EmailQueue_UpdatedAt");
+        });
+
+        // Configure ScheduledEmailJob entity
+        modelBuilder.Entity<ScheduledEmailJob>(entity =>
+        {
+            entity.ToTable("ScheduledEmailJobs");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.JobType).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.EntityType).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.EntityId).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.Status).IsRequired().HasMaxLength(20).HasDefaultValue("Active");
+            entity.Property(e => e.RecurrenceRule).HasMaxLength(20);
+            entity.Property(e => e.Metadata).HasColumnType("jsonb");
+
+            entity.HasIndex(e => new { e.Status, e.ScheduledFor, e.NextRunDate }).HasDatabaseName("IX_ScheduledEmailJobs_Active");
+            entity.HasIndex(e => new { e.EntityType, e.EntityId }).HasDatabaseName("IX_ScheduledEmailJobs_Entity");
         });
     }
 }
