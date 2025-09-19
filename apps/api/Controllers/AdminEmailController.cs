@@ -86,13 +86,11 @@ namespace MemberOrgApi.Controllers
                     .Select(g => new EmailRecipient { Email = g.First(), Name = null })
                     .ToList();
 
-                // Ensure HTML body; if plain text provided, wrap it
-                var htmlBody = request.IsHtml
-                    ? request.Body
-                    : $"<pre style=\"font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', 'Roboto', monospace; white-space: pre-wrap;\">{System.Net.WebUtility.HtmlEncode(request.Body)}</pre>";
+                // Build branded HTML body; if plain text provided, convert to HTML and wrap
+                var htmlBody = BuildBrandedEmailHtml(request.Subject, request.Body, request.IsHtml);
 
                 var campaignId = await _emailQueueService.QueueCampaignAsync(
-                    campaignName: $"One-off Broadcast - {DateTime.UtcNow:yyyy-MM-dd HH:mm} UTC",
+                    campaignName: $"One-off Broadcast - {request.Subject} - {DateTime.UtcNow:yyyy-MM-dd HH:mm} UTC",
                     campaignType: "Broadcast",
                     recipients: recipients,
                     subject: request.Subject,
@@ -118,6 +116,51 @@ namespace MemberOrgApi.Controllers
                     Message = "An error occurred while sending the email"
                 });
             }
+        }
+
+        private string BuildBrandedEmailHtml(string subject, string content, bool isHtml)
+        {
+            var bodyHtml = isHtml
+                ? content
+                : System.Net.WebUtility.HtmlEncode(content).Replace("\n", "<br/>");
+
+            return $@"<!DOCTYPE html>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset='utf-8' />
+  <meta name='viewport' content='width=device-width, initial-scale=1' />
+  <title>{System.Net.WebUtility.HtmlEncode(subject)} - BCFR</title>
+  <style>
+    body {{ font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', 'Roboto', sans-serif; line-height: 1.6; color: #212529; margin: 0; padding: 0; background-color: #fdf8f1; }}
+    .wrapper {{ background-color: #fdf8f1; padding: 40px 20px; }}
+    .container {{ max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.07); }}
+    .header {{ background: #6B3AA0; color: #fff; padding: 20px; }}
+    .header h1 {{ margin: 0; font-size: 20px; }}
+    .content {{ padding: 24px; }}
+    .content h2 {{ margin-top: 0; font-size: 18px; color: #212529; }}
+    .footer {{ background: #F5F2ED; color: #6b7280; padding: 16px; text-align: center; font-size: 12px; }}
+    a.button {{ background:#4263EB; color:#fff; padding:12px 18px; border-radius:8px; text-decoration:none; display:inline-block; }}
+  </style>
+  <!-- Branding: BCFR purple header, light background, consistent typography -->
+  </head>
+  <body>
+    <div class='wrapper'>
+      <div class='container'>
+        <div class='header'>
+          <h1>Birmingham Committee on Foreign Relations</h1>
+        </div>
+        <div class='content'>
+          {(string.IsNullOrWhiteSpace(subject) ? "" : $"<h2>{System.Net.WebUtility.HtmlEncode(subject)}</h2>")}
+          {bodyHtml}
+        </div>
+        <div class='footer'>
+          <p><strong>BCFR</strong> &middot; This message was sent by the administrators.</p>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>";
         }
 
         private bool IsValidEmail(string email)
