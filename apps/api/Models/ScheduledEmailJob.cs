@@ -5,7 +5,7 @@ namespace MemberOrgApi.Models;
 public class ScheduledEmailJob
 {
     public Guid Id { get; set; } = Guid.NewGuid();
-    public string JobType { get; set; } = string.Empty; // EventFirstReminder, EventFinalReminder, etc.
+    public string JobType { get; set; } = string.Empty; // EventRsvpDeadlineReminder, EventAttendeeReminder
     public string EntityType { get; set; } = string.Empty; // Event, Subscription, Newsletter
     public string EntityId { get; set; } = string.Empty;   // Guid string for Event
     public DateTime ScheduledFor { get; set; }
@@ -19,4 +19,3 @@ public class ScheduledEmailJob
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }
-

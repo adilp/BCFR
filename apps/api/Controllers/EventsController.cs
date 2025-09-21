@@ -107,6 +107,43 @@ public class EventsController : ControllerBase
         return Ok(dto);
     }
 
+    // GET: /events/{id}/calendar.ics - Download ICS for event
+    [HttpGet("{id}/calendar.ics")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetEventCalendar(Guid id)
+    {
+        var evt = await _context.Events.FirstOrDefaultAsync(e => e.Id == id);
+        if (evt == null)
+        {
+            return NotFound();
+        }
+
+        // Compute start/end in UTC based on Central time date + times
+        var central = TimeZoneInfo.FindSystemTimeZoneById("America/Chicago");
+        var eventDateLocalDate = TimeZoneInfo.ConvertTimeFromUtc(evt.EventDate, central).Date;
+        var startLocal = eventDateLocalDate.Add(evt.StartTime);
+        var endLocal = eventDateLocalDate.Add(evt.EndTime);
+        var startUtc = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(startLocal, DateTimeKind.Unspecified), central);
+        var endUtc = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(endLocal, DateTimeKind.Unspecified), central);
+
+        string FormatIcsDate(DateTime dt) => dt.ToUniversalTime().ToString("yyyyMMdd'T'HHmmss'Z'");
+
+        var ics = $@"BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//BCFR//Events//EN\r\nCALSCALE:GREGORIAN\r\nMETHOD:PUBLISH\r\nBEGIN:VEVENT\r\nUID:{evt.Id}@birminghamforeignrelations.org\r\nDTSTAMP:{FormatIcsDate(DateTime.UtcNow)}\r\nDTSTART:{FormatIcsDate(startUtc)}\r\nDTEND:{FormatIcsDate(endUtc)}\r\nSUMMARY:{EscapeIcsText(evt.Title)}\r\nDESCRIPTION:{EscapeIcsText(evt.Description)}\r\nLOCATION:{EscapeIcsText(evt.Location)}\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n";
+
+        Response.Headers["Content-Disposition"] = $"attachment; filename=event-{evt.Id}.ics";
+        return Content(ics, "text/calendar");
+    }
+
+    private static string EscapeIcsText(string? input)
+    {
+        if (string.IsNullOrEmpty(input)) return string.Empty;
+        return input
+            .Replace("\\", "\\\\")
+            .Replace(";", "\\;")
+            .Replace(",", "\\,")
+            .Replace("\n", "\\n");
+    }
+
     // POST: /events - Create new event (Admin only)
     [HttpPost]
     [Authorize(Policy = "AdminOnly")]
@@ -631,18 +668,29 @@ public class EventsController : ControllerBase
             await _context.SaveChangesAsync();
 
             // Queue emails linked to the campaign
+            var successCount = 0;
             foreach (var user in nonRsvpUsers)
             {
                 // Generate RSVP token per user
-                var token = await _tokenService.GenerateRsvpTokenAsync(user.Id, evt.Id, evt.RsvpDeadline);
-                var htmlBody = BuildEventEmailHtml(evt, user.FirstName, token.Token);
-                // Queue per user to embed unique token
-                await _emailQueue.QueueSingleEmailAsync(user.Email,
-                    subject: $"Reminder: {evt.Title} is coming up!",
-                    htmlBody: htmlBody,
-                    recipientName: $"{user.FirstName} {user.LastName}",
-                    campaignId: campaign.Id);
+                if (!IsValidEmail(user.Email)) continue;
+                try
+                {
+                    var token = await _tokenService.GenerateRsvpTokenAsync(user.Id, evt.Id, evt.RsvpDeadline);
+                    var htmlBody = BuildEventEmailHtml(evt, user.FirstName, token.Token);
+                    // Queue per user to embed unique token
+                    await _emailQueue.QueueSingleEmailAsync(user.Email,
+                        subject: $"Reminder: {evt.Title} is coming up!",
+                        htmlBody: htmlBody,
+                        recipientName: $"{user.FirstName} {user.LastName}",
+                        campaignId: campaign.Id);
+                    successCount++;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to queue reminder email for user {UserId} {Email}", user.Id, user.Email);
+                }
             }
+            campaign.TotalRecipients = successCount;
 
             await _activityLogService.LogActivityAsync(
                 Guid.Parse(userId),
@@ -912,18 +960,26 @@ public class EventsController : ControllerBase
         var count = 0;
         foreach (var user in users)
         {
-            // RSVP token per user
-            var token = await _tokenService.GenerateRsvpTokenAsync(user.Id, evt.Id, evt.RsvpDeadline);
-            var htmlBody = BuildEventEmailHtml(evt, user.FirstName, token.Token, header: "You're Invited: Event Announcement");
+            if (!IsValidEmail(user.Email)) continue;
+            try
+            {
+                // RSVP token per user
+                var token = await _tokenService.GenerateRsvpTokenAsync(user.Id, evt.Id, evt.RsvpDeadline);
+                var htmlBody = BuildEventEmailHtml(evt, user.FirstName, token.Token, header: "You're Invited: Event Announcement");
 
-            await _emailQueue.QueueSingleEmailAsync(
-                to: user.Email,
-                subject: $"You're invited: {evt.Title}",
-                htmlBody: htmlBody,
-                recipientName: $"{user.FirstName} {user.LastName}",
-                campaignId: campaign.Id
-            );
-            count++;
+                await _emailQueue.QueueSingleEmailAsync(
+                    to: user.Email,
+                    subject: $"You're invited: {evt.Title}",
+                    htmlBody: htmlBody,
+                    recipientName: $"{user.FirstName} {user.LastName}",
+                    campaignId: campaign.Id
+                );
+                count++;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to queue announcement email for user {UserId} {Email}", user.Id, user.Email);
+            }
         }
 
         // Update campaign recipient count
@@ -931,6 +987,20 @@ public class EventsController : ControllerBase
         await _context.SaveChangesAsync();
 
         _logger.LogInformation("Queued announcement campaign {CampaignId} for event {EventId} with {Count} recipients", campaign.Id, evt.Id, count);
+    }
+
+    private bool IsValidEmail(string? email)
+    {
+        if (string.IsNullOrWhiteSpace(email)) return false;
+        try
+        {
+            var addr = new System.Net.Mail.MailAddress(email);
+            return addr.Address == email;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private async Task ScheduleEventReminderJobs(Event evt)
@@ -950,32 +1020,48 @@ public class EventsController : ControllerBase
         var deadlineWhenUtc = ToUtcCentral(deadlineReminderLocal);
         var deadlineScheduledFor = deadlineWhenUtc < DateTime.UtcNow ? DateTime.UtcNow.AddMinutes(1) : deadlineWhenUtc;
 
-        _context.ScheduledEmailJobs.Add(new ScheduledEmailJob
+        var existsDeadline = await _context.ScheduledEmailJobs.AnyAsync(j =>
+            j.JobType == "EventRsvpDeadlineReminder" &&
+            j.EntityType == "Event" &&
+            j.EntityId == evt.Id.ToString() &&
+            j.Status == "Active");
+        if (!existsDeadline)
         {
-            JobType = "EventRsvpDeadlineReminder",
-            EntityType = "Event",
-            EntityId = evt.Id.ToString(),
-            ScheduledFor = deadlineScheduledFor,
-            Status = "Active",
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        });
+            _context.ScheduledEmailJobs.Add(new ScheduledEmailJob
+            {
+                JobType = "EventRsvpDeadlineReminder",
+                EntityType = "Event",
+                EntityId = evt.Id.ToString(),
+                ScheduledFor = deadlineScheduledFor,
+                Status = "Active",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            });
+        }
 
         // 1 day before event at 9:00 AM CT
         var attendeeReminderLocal = eventDateCentral.AddDays(-1).AddHours(9);
         var attendeeWhenUtc = ToUtcCentral(attendeeReminderLocal);
         var attendeeScheduledFor = attendeeWhenUtc < DateTime.UtcNow ? DateTime.UtcNow.AddMinutes(1) : attendeeWhenUtc;
 
-        _context.ScheduledEmailJobs.Add(new ScheduledEmailJob
+        var existsAttendee = await _context.ScheduledEmailJobs.AnyAsync(j =>
+            j.JobType == "EventAttendeeReminder" &&
+            j.EntityType == "Event" &&
+            j.EntityId == evt.Id.ToString() &&
+            j.Status == "Active");
+        if (!existsAttendee)
         {
-            JobType = "EventAttendeeReminder",
-            EntityType = "Event",
-            EntityId = evt.Id.ToString(),
-            ScheduledFor = attendeeScheduledFor,
-            Status = "Active",
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        });
+            _context.ScheduledEmailJobs.Add(new ScheduledEmailJob
+            {
+                JobType = "EventAttendeeReminder",
+                EntityType = "Event",
+                EntityId = evt.Id.ToString(),
+                ScheduledFor = attendeeScheduledFor,
+                Status = "Active",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            });
+        }
 
         await _context.SaveChangesAsync();
         _logger.LogInformation("Scheduled RSVP deadline and attendee reminder jobs for event {EventId}", evt.Id);
@@ -989,6 +1075,7 @@ public class EventsController : ControllerBase
         var yesWithGuestUrl = evt.AllowPlusOne
             ? $"{apiBase}/email-rsvp/respond?token={Uri.EscapeDataString(rsvpToken)}&response=yes&plusOne=true"
             : null;
+        var icsUrl = $"{apiBase}/events/{evt.Id}/calendar.ics";
 
         var central = TimeZoneInfo.FindSystemTimeZoneById("America/Chicago");
         var eventDateLocal = TimeZoneInfo.ConvertTimeFromUtc(evt.EventDate, central);
@@ -1020,10 +1107,14 @@ public class EventsController : ControllerBase
                 {(yesWithGuestUrl != null ? $"<a href='{yesWithGuestUrl}' style='background:#16a34a;color:#fff;padding:12px 18px;border-radius:8px;text-decoration:none;margin-right:12px;display:inline-block'>RSVP Yes + Guest</a>" : "")}
                 <a href='{noUrl}' style='background:#ef4444;color:#fff;padding:12px 18px;border-radius:8px;text-decoration:none;display:inline-block'>RSVP No</a>
               </div>
+              <div style='text-align:center;margin:12px 0'>
+                <a href='{icsUrl}' style='background:#4263EB;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;display:inline-block'>Add to Calendar (.ics)</a>
+              </div>
               <p style='color:#6b7280;font-size:14px'>If the buttons don't work, copy and paste these links into your browser:<br/>
                 Yes: {yesUrl}<br/>
                 {(yesWithGuestUrl != null ? $"Yes + Guest: {yesWithGuestUrl}<br/>" : "")}
                 No: {noUrl}
+                <br/>Calendar: {icsUrl}
               </p>
             </div>
             <div style='background:#F5F2ED;color:#6b7280;padding:16px;text-align:center;font-size:12px'>

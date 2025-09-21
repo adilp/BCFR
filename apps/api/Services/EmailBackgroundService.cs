@@ -306,6 +306,8 @@ public class EmailBackgroundService : BackgroundService
         var dateStr = eventDateLocal.ToString("dddd, MMMM dd, yyyy");
         var start = DateTime.Today.Add(evt.StartTime).ToString("h:mm tt");
         var end = DateTime.Today.Add(evt.EndTime).ToString("h:mm tt");
+        var apiBase = configuration["App:ApiUrl"] ?? "http://localhost:5001/api";
+        var icsUrl = $"{apiBase}/events/{evt.Id}/calendar.ics";
 
         return $@"<!DOCTYPE html>
         <html>
@@ -324,6 +326,9 @@ public class EmailBackgroundService : BackgroundService
                 <li><strong>Location:</strong> {evt.Location}</li>
                 <li><strong>Speaker:</strong> {evt.Speaker}</li>
               </ul>
+              <div style='text-align:center;margin:12px 0'>
+                <a href='{icsUrl}' style='background:#4263EB;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;display:inline-block'>Add to Calendar (.ics)</a>
+              </div>
               <p style='color:#6b7280;font-size:14px'>If your plans change, please update your RSVP from your account.</p>
             </div>
             <div style='background:#F5F2ED;color:#6b7280;padding:16px;text-align:center;font-size:12px'>
