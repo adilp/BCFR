@@ -498,6 +498,27 @@ public class EventsController : ControllerBase
         _logger.LogInformation("RSVP created/updated: EventId={EventId}, UserId={UserId}, Response={Response}", 
             id, userId, createDto.Response);
 
+        // Queue RSVP confirmation email if this is a YES and it's new or changed to yes
+        if (createDto.Response == "yes" && (isNewRsvp || previousResponse != "yes"))
+        {
+            try
+            {
+                var campaign = await EnsureRsvpConfirmationCampaign(evt);
+                var html = BuildRsvpConfirmationHtml(evt, existingRsvp.User.FirstName);
+                await _emailQueue.QueueSingleEmailAsync(
+                    to: existingRsvp.User.Email,
+                    subject: $"RSVP Confirmed: {evt.Title}",
+                    htmlBody: html,
+                    recipientName: $"{existingRsvp.User.FirstName} {existingRsvp.User.LastName}",
+                    campaignId: campaign.Id
+                );
+            }
+            catch (Exception exq)
+            {
+                _logger.LogWarning(exq, "Failed to queue RSVP confirmation email for event {EventId} user {UserId}", evt.Id, existingRsvp.UserId);
+            }
+        }
+
         return Ok(dto);
     }
 
@@ -1114,6 +1135,65 @@ public class EventsController : ControllerBase
                 No: {noUrl}
                 
               </p>
+            </div>
+            <div style='background:#F5F2ED;color:#6b7280;padding:16px;text-align:center;font-size:12px'>
+              Birmingham Committee on Foreign Relations
+            </div>
+          </div>
+        </body>
+        </html>";
+    }
+
+    private async Task<EmailCampaign> EnsureRsvpConfirmationCampaign(Event evt)
+    {
+        var name = $"RSVP Confirmation - {evt.Id}";
+        var existing = await _context.EmailCampaigns.FirstOrDefaultAsync(c => c.Name == name && c.Type == "EventRsvpConfirmation");
+        if (existing != null) return existing;
+
+        var campaign = new EmailCampaign
+        {
+            Name = name,
+            Type = "EventRsvpConfirmation",
+            Status = "Active",
+            TotalRecipients = 0,
+            CreatedAt = DateTime.UtcNow
+        };
+        _context.EmailCampaigns.Add(campaign);
+        await _context.SaveChangesAsync();
+        return campaign;
+    }
+
+    private string BuildRsvpConfirmationHtml(Event evt, string firstName)
+    {
+        var apiBase = _configuration["App:ApiUrl"] ?? "http://localhost:5001/api";
+        var icsUrl = $"{apiBase}/events/{evt.Id}/calendar.ics";
+        var central = TimeZoneInfo.FindSystemTimeZoneById("America/Chicago");
+        var eventDateLocal = TimeZoneInfo.ConvertTimeFromUtc(evt.EventDate, central);
+        var dateStr = eventDateLocal.ToString("dddd, MMMM dd, yyyy");
+        var start = DateTime.Today.Add(evt.StartTime).ToString("h:mm tt");
+        var end = DateTime.Today.Add(evt.EndTime).ToString("h:mm tt");
+
+        return $@"<!DOCTYPE html>
+        <html>
+        <head><meta charset='utf-8' /><title>{evt.Title} - RSVP Confirmation</title></head>
+        <body style='font-family: -apple-system, BlinkMacSystemFont, Inter, Segoe UI, Roboto, sans-serif; background: #fdf8f1; padding: 24px; color: #212529;'>
+          <div style='max-width:600px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.07)'>
+            <div style='background:#6B3AA0;color:#fff;padding:20px'>
+              <h1 style='margin:0;font-size:22px'>RSVP Confirmed</h1>
+            </div>
+            <div style='padding:24px'>
+              <p style='margin-top:0'>Hello {firstName},</p>
+              <p>Thanks for RSVP'ing <strong>YES</strong> to <strong>{evt.Title}</strong>.</p>
+              <ul>
+                <li><strong>Date:</strong> {dateStr}</li>
+                <li><strong>Time:</strong> {start} – {end} CT</li>
+                <li><strong>Location:</strong> {evt.Location}</li>
+                <li><strong>Speaker:</strong> {evt.Speaker}</li>
+              </ul>
+              <div style='text-align:center;margin:12px 0'>
+                <a href='{icsUrl}' style='background:#4263EB;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;display:inline-block'>Add to Calendar (.ics)</a>
+              </div>
+              <p style='color:#6b7280;font-size:14px'>Calendar: {icsUrl}</p>
             </div>
             <div style='background:#F5F2ED;color:#6b7280;padding:16px;text-align:center;font-size:12px'>
               Birmingham Committee on Foreign Relations

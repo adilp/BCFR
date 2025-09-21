@@ -385,7 +385,7 @@ public class EmailBackgroundService : BackgroundService
                 if (item.CampaignId != null)
                 {
                     var campaign = await db.EmailCampaigns.FirstOrDefaultAsync(c => c.Id == item.CampaignId.Value, ct);
-                    if (campaign?.Type == "EventAttendeeReminder")
+                    if (campaign?.Type == "EventAttendeeReminder" || campaign?.Type == "EventRsvpConfirmation")
                     {
                         var maybeEventId = TryExtractEventIdFromIcsLink(item.HtmlBody);
                         if (maybeEventId != null)
