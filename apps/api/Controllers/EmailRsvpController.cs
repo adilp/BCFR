@@ -23,17 +23,23 @@ namespace MemberOrgApi.Controllers
         private readonly AppDbContext _context;
         private readonly ITokenService _tokenService;
         private readonly IActivityLogService _activityLogService;
+        private readonly IEmailQueueService _emailQueueService;
+        private readonly IConfiguration _configuration;
         private readonly ILogger<EmailRsvpController> _logger;
 
         public EmailRsvpController(
             AppDbContext context,
             ITokenService tokenService,
             IActivityLogService activityLogService,
+            IEmailQueueService emailQueueService,
+            IConfiguration configuration,
             ILogger<EmailRsvpController> logger)
         {
             _context = context;
             _tokenService = tokenService;
             _activityLogService = activityLogService;
+            _emailQueueService = emailQueueService;
+            _configuration = configuration;
             _logger = logger;
         }
 
@@ -178,6 +184,31 @@ namespace MemberOrgApi.Controllers
                     successMessage += " We've also noted that you'll be bringing a guest.";
                 }
 
+                // If RSVP is YES (new or changed to yes), queue confirmation email with ICS
+                if (response == "yes" && (isNewRsvp || previousResponse != "yes"))
+                {
+                    try
+                    {
+                        user = rsvpToken.User ?? await _context.Users.FindAsync(rsvpToken.UserId);
+                        if (user != null && !string.IsNullOrWhiteSpace(user.Email))
+                        {
+                            var campaign = await EnsureRsvpConfirmationCampaign(evt);
+                            var html = BuildRsvpConfirmationHtml(_configuration, evt, user.FirstName);
+                            await _emailQueueService.QueueSingleEmailAsync(
+                                to: user.Email,
+                                subject: $"RSVP Confirmed: {evt.Title}",
+                                htmlBody: html,
+                                recipientName: $"{user.FirstName} {user.LastName}",
+                                campaignId: campaign.Id
+                            );
+                        }
+                    }
+                    catch (Exception exq)
+                    {
+                        _logger.LogWarning(exq, "Failed to queue RSVP confirmation email for event {EventId} user {UserId}", evt.Id, rsvpToken.UserId);
+                    }
+                }
+
                 return Content(GenerateHtmlResponse(true, "RSVP Successful", successMessage, evt), "text/html");
             }
             catch (Exception ex)
@@ -187,6 +218,65 @@ namespace MemberOrgApi.Controllers
                     "An error occurred while processing your RSVP. Please try again or contact support."),
                     "text/html");
             }
+        }
+
+        private async Task<EmailCampaign> EnsureRsvpConfirmationCampaign(Event evt)
+        {
+            var name = $"RSVP Confirmation - {evt.Id}";
+            var existing = await _context.EmailCampaigns.FirstOrDefaultAsync(c => c.Name == name && c.Type == "EventRsvpConfirmation");
+            if (existing != null) return existing;
+
+            var campaign = new EmailCampaign
+            {
+                Name = name,
+                Type = "EventRsvpConfirmation",
+                Status = "Active",
+                TotalRecipients = 0,
+                CreatedAt = DateTime.UtcNow
+            };
+            _context.EmailCampaigns.Add(campaign);
+            await _context.SaveChangesAsync();
+            return campaign;
+        }
+
+        private static string BuildRsvpConfirmationHtml(IConfiguration configuration, Event evt, string firstName)
+        {
+            var central = TimeZoneInfo.FindSystemTimeZoneById("America/Chicago");
+            var eventDateLocal = TimeZoneInfo.ConvertTimeFromUtc(evt.EventDate, central);
+            var dateStr = eventDateLocal.ToString("dddd, MMMM dd, yyyy");
+            var start = DateTime.Today.Add(evt.StartTime).ToString("h:mm tt");
+            var end = DateTime.Today.Add(evt.EndTime).ToString("h:mm tt");
+            var apiBase = configuration["App:ApiUrl"] ?? "http://localhost:5001/api";
+            var icsUrl = $"{apiBase}/events/{evt.Id}/calendar.ics";
+
+            return $@"<!DOCTYPE html>
+        <html>
+        <head><meta charset='utf-8' /><title>{evt.Title} - RSVP Confirmation</title></head>
+        <body style='font-family: -apple-system, BlinkMacSystemFont, Inter, Segoe UI, Roboto, sans-serif; background: #fdf8f1; padding: 24px; color: #212529;'>
+          <div style='max-width:600px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.07)'>
+            <div style='background:#6B3AA0;color:#fff;padding:20px'>
+              <h1 style='margin:0;font-size:22px'>RSVP Confirmed</h1>
+            </div>
+            <div style='padding:24px'>
+              <p style='margin-top:0'>Hello {firstName},</p>
+              <p>Thanks for RSVP'ing <strong>YES</strong> to <strong>{evt.Title}</strong>.</p>
+              <ul>
+                <li><strong>Date:</strong> {dateStr}</li>
+                <li><strong>Time:</strong> {start} – {end} CT</li>
+                <li><strong>Location:</strong> {evt.Location}</li>
+                <li><strong>Speaker:</strong> {evt.Speaker}</li>
+              </ul>
+              <div style='text-align:center;margin:12px 0'>
+                <a href='{icsUrl}' style='background:#4263EB;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;display:inline-block'>Add to Calendar (.ics)</a>
+              </div>
+              <p style='color:#6b7280;font-size:14px'>Calendar: {icsUrl}</p>
+            </div>
+            <div style='background:#F5F2ED;color:#6b7280;padding:16px;text-align:center;font-size:12px'>
+              Birmingham Committee on Foreign Relations
+            </div>
+          </div>
+        </body>
+        </html>";
         }
 
         private string GenerateHtmlResponse(bool success, string title, string message, Event? evt = null)

@@ -5,6 +5,7 @@ using System.Text.Json.Nodes;
 using MemberOrgApi.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -13,9 +14,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MemberOrgApi.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250918223725_AddEmailQueueTables")]
+    partial class AddEmailQueueTables
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -462,73 +465,6 @@ namespace MemberOrgApi.Migrations
                         .IsUnique();
 
                     b.ToTable("RsvpTokens", "memberorg");
-                });
-
-            modelBuilder.Entity("MemberOrgApi.Models.ScheduledEmailJob", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("EntityId")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("EntityType")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<int>("FailureCount")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("JobType")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<DateTime?>("LastRunDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<JsonObject>("Metadata")
-                        .HasColumnType("jsonb");
-
-                    b.Property<DateTime?>("NextRunDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("RecurrenceRule")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<int>("RunCount")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("ScheduledFor")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)")
-                        .HasDefaultValue("Active");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("EntityType", "EntityId")
-                        .HasDatabaseName("IX_ScheduledEmailJobs_Entity");
-
-                    b.HasIndex("Status", "ScheduledFor", "NextRunDate")
-                        .HasDatabaseName("IX_ScheduledEmailJobs_Active");
-
-                    b.ToTable("ScheduledEmailJobs", "memberorg");
                 });
 
             modelBuilder.Entity("MemberOrgApi.Models.Session", b =>

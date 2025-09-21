@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
 using MemberOrgApi.Data;
 using MemberOrgApi.Models;
 using MemberOrgApi.DTOs;
@@ -23,6 +24,8 @@ public class EventsController : ControllerBase
     private readonly ILogger<EventsController> _logger;
     private readonly IActivityLogService _activityLogService;
     private readonly IEmailService _emailService;
+    private readonly IEmailQueueService _emailQueue;
+    private readonly IConfiguration _configuration;
     private readonly ITokenService _tokenService;
 
     public EventsController(
@@ -30,13 +33,17 @@ public class EventsController : ControllerBase
         ILogger<EventsController> logger,
         IActivityLogService activityLogService,
         IEmailService emailService,
-        ITokenService tokenService)
+        IEmailQueueService emailQueueService,
+        ITokenService tokenService,
+        IConfiguration configuration)
     {
         _context = context;
         _logger = logger;
         _activityLogService = activityLogService;
         _emailService = emailService;
+        _emailQueue = emailQueueService;
         _tokenService = tokenService;
+        _configuration = configuration;
     }
 
     // GET: /events - Get all published events (public)
@@ -98,6 +105,43 @@ public class EventsController : ControllerBase
         dto.RsvpStats = await GetRsvpStats(evt.Id);
 
         return Ok(dto);
+    }
+
+    // GET: /events/{id}/calendar.ics - Download ICS for event
+    [HttpGet("{id}/calendar.ics")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetEventCalendar(Guid id)
+    {
+        var evt = await _context.Events.FirstOrDefaultAsync(e => e.Id == id);
+        if (evt == null)
+        {
+            return NotFound();
+        }
+
+        // Compute start/end in UTC based on Central time date + times
+        var central = TimeZoneInfo.FindSystemTimeZoneById("America/Chicago");
+        var eventDateLocalDate = TimeZoneInfo.ConvertTimeFromUtc(evt.EventDate, central).Date;
+        var startLocal = eventDateLocalDate.Add(evt.StartTime);
+        var endLocal = eventDateLocalDate.Add(evt.EndTime);
+        var startUtc = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(startLocal, DateTimeKind.Unspecified), central);
+        var endUtc = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(endLocal, DateTimeKind.Unspecified), central);
+
+        string FormatIcsDate(DateTime dt) => dt.ToUniversalTime().ToString("yyyyMMdd'T'HHmmss'Z'");
+
+        var ics = $@"BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//BCFR//Events//EN\r\nCALSCALE:GREGORIAN\r\nMETHOD:PUBLISH\r\nBEGIN:VEVENT\r\nUID:{evt.Id}@birminghamforeignrelations.org\r\nDTSTAMP:{FormatIcsDate(DateTime.UtcNow)}\r\nDTSTART:{FormatIcsDate(startUtc)}\r\nDTEND:{FormatIcsDate(endUtc)}\r\nSUMMARY:{EscapeIcsText(evt.Title)}\r\nDESCRIPTION:{EscapeIcsText(evt.Description)}\r\nLOCATION:{EscapeIcsText(evt.Location)}\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n";
+
+        Response.Headers["Content-Disposition"] = $"attachment; filename=event-{evt.Id}.ics";
+        return Content(ics, "text/calendar");
+    }
+
+    private static string EscapeIcsText(string? input)
+    {
+        if (string.IsNullOrEmpty(input)) return string.Empty;
+        return input
+            .Replace("\\", "\\\\")
+            .Replace(";", "\\;")
+            .Replace(",", "\\,")
+            .Replace("\n", "\\n");
     }
 
     // POST: /events - Create new event (Admin only)
@@ -162,28 +206,11 @@ public class EventsController : ControllerBase
 
         _logger.LogInformation("Event created: {EventId} by {UserId}", evt.Id, userId);
 
-        // Send announcement emails if event is published
+        // Queue announcement campaign if event is published
         if (evt.Status == "published")
         {
-            // Fire and forget - don't wait for emails to send
-            var eventId = evt.Id;
-            var serviceProvider = HttpContext.RequestServices;
-            _ = Task.Run(async () =>
-            {
-                // Create a new scope for the background task
-                using var scope = serviceProvider.CreateScope();
-                var scopedContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                var scopedEmailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
-                var scopedTokenService = scope.ServiceProvider.GetRequiredService<ITokenService>();
-                var scopedLogger = scope.ServiceProvider.GetRequiredService<ILogger<EventsController>>();
-
-                // Reload the event in the new context
-                var eventToProcess = await scopedContext.Events.FindAsync(eventId);
-                if (eventToProcess != null)
-                {
-                    await SendEventAnnouncementEmailsScoped(eventToProcess, scopedContext, scopedEmailService, scopedTokenService, scopedLogger);
-                }
-            });
+            await QueueEventAnnouncementCampaign(evt);
+            await ScheduleEventReminderJobs(evt);
         }
 
         return CreatedAtAction(nameof(GetEvent), new { id = evt.Id }, dto);
@@ -245,28 +272,11 @@ public class EventsController : ControllerBase
 
         _logger.LogInformation("Event updated: {EventId}", evt.Id);
 
-        // Send announcement emails if event is being published for the first time
+        // Queue announcement campaign if event is being published for the first time
         if (previousStatus != "published" && updateDto.Status == "published")
         {
-            // Fire and forget - don't wait for emails to send
-            var eventId = evt.Id;
-            var serviceProvider = HttpContext.RequestServices;
-            _ = Task.Run(async () =>
-            {
-                // Create a new scope for the background task
-                using var scope = serviceProvider.CreateScope();
-                var scopedContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                var scopedEmailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
-                var scopedTokenService = scope.ServiceProvider.GetRequiredService<ITokenService>();
-                var scopedLogger = scope.ServiceProvider.GetRequiredService<ILogger<EventsController>>();
-
-                // Reload the event in the new context
-                var eventToProcess = await scopedContext.Events.FindAsync(eventId);
-                if (eventToProcess != null)
-                {
-                    await SendEventAnnouncementEmailsScoped(eventToProcess, scopedContext, scopedEmailService, scopedTokenService, scopedLogger);
-                }
-            });
+            await QueueEventAnnouncementCampaign(evt);
+            await ScheduleEventReminderJobs(evt);
         }
 
         return NoContent();
@@ -488,6 +498,27 @@ public class EventsController : ControllerBase
         _logger.LogInformation("RSVP created/updated: EventId={EventId}, UserId={UserId}, Response={Response}", 
             id, userId, createDto.Response);
 
+        // Queue RSVP confirmation email if this is a YES and it's new or changed to yes
+        if (createDto.Response == "yes" && (isNewRsvp || previousResponse != "yes"))
+        {
+            try
+            {
+                var campaign = await EnsureRsvpConfirmationCampaign(evt);
+                var html = BuildRsvpConfirmationHtml(evt, existingRsvp.User.FirstName);
+                await _emailQueue.QueueSingleEmailAsync(
+                    to: existingRsvp.User.Email,
+                    subject: $"RSVP Confirmed: {evt.Title}",
+                    htmlBody: html,
+                    recipientName: $"{existingRsvp.User.FirstName} {existingRsvp.User.LastName}",
+                    campaignId: campaign.Id
+                );
+            }
+            catch (Exception exq)
+            {
+                _logger.LogWarning(exq, "Failed to queue RSVP confirmation email for event {EventId} user {UserId}", evt.Id, existingRsvp.UserId);
+            }
+        }
+
         return Ok(dto);
     }
 
@@ -645,25 +676,42 @@ public class EventsController : ControllerBase
             var userCount = nonRsvpUsers.Count;
             var eventTitle = evt.Title;
 
-            // Send reminder emails in background
-            var serviceProvider = HttpContext.RequestServices;
-            _ = Task.Run(async () =>
+            // Create a campaign grouping for this reminder batch
+            var campaign = new EmailCampaign
             {
+                Name = $"Event Reminder - {evt.Title}",
+                Type = "EventReminder",
+                Status = "Active",
+                TotalRecipients = nonRsvpUsers.Count,
+                CreatedAt = DateTime.UtcNow
+            };
+            _context.EmailCampaigns.Add(campaign);
+            await _context.SaveChangesAsync();
+
+            // Queue emails linked to the campaign
+            var successCount = 0;
+            foreach (var user in nonRsvpUsers)
+            {
+                // Generate RSVP token per user
+                if (!IsValidEmail(user.Email)) continue;
                 try
                 {
-                    using var scope = serviceProvider.CreateScope();
-                    var scopedContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                    var scopedEmailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
-                    var scopedTokenService = scope.ServiceProvider.GetRequiredService<ITokenService>();
-                    var scopedLogger = scope.ServiceProvider.GetRequiredService<ILogger<EventsController>>();
-
-                    await SendEventReminderEmailsScoped(evt, nonRsvpUsers, scopedEmailService, scopedTokenService, scopedLogger);
+                    var token = await _tokenService.GenerateRsvpTokenAsync(user.Id, evt.Id, evt.RsvpDeadline);
+                    var htmlBody = BuildEventEmailHtml(evt, user.FirstName, token.Token);
+                    // Queue per user to embed unique token
+                    await _emailQueue.QueueSingleEmailAsync(user.Email,
+                        subject: $"Reminder: {evt.Title} is coming up!",
+                        htmlBody: htmlBody,
+                        recipientName: $"{user.FirstName} {user.LastName}",
+                        campaignId: campaign.Id);
+                    successCount++;
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error in background task for sending reminder emails");
+                    _logger.LogError(ex, "Failed to queue reminder email for user {UserId} {Email}", user.Id, user.Email);
                 }
-            });
+            }
+            campaign.TotalRecipients = successCount;
 
             await _activityLogService.LogActivityAsync(
                 Guid.Parse(userId),
@@ -672,10 +720,7 @@ public class EventsController : ControllerBase
                 $"Sent reminder emails for event '{eventTitle}' to {userCount} non-RSVP users"
             );
 
-            return Ok(new {
-                message = $"Reminder emails are being sent to {userCount} users who haven't RSVPed",
-                count = userCount
-            });
+            return Ok(new { message = $"Queued reminder emails to {userCount} users who haven't RSVPed", count = userCount });
         }
         catch (Exception ex)
         {
@@ -912,5 +957,249 @@ public class EventsController : ControllerBase
         {
             scopedLogger.LogError(ex, "Error sending event reminder emails for event {EventId}", evt.Id);
         }
+    }
+
+    private async Task QueueEventAnnouncementCampaign(Event evt)
+    {
+        // Build campaign
+        var campaign = new EmailCampaign
+        {
+            Name = $"Event Announcement - {evt.Title}",
+            Type = "EventAnnouncement",
+            Status = "Active",
+            TotalRecipients = 0, // will update after queuing
+            CreatedAt = DateTime.UtcNow
+        };
+        _context.EmailCampaigns.Add(campaign);
+        await _context.SaveChangesAsync();
+
+        // Get all active users
+        var users = await _context.Users
+            .Where(u => u.IsActive)
+            .ToListAsync();
+
+        var count = 0;
+        foreach (var user in users)
+        {
+            if (!IsValidEmail(user.Email)) continue;
+            try
+            {
+                // RSVP token per user
+                var token = await _tokenService.GenerateRsvpTokenAsync(user.Id, evt.Id, evt.RsvpDeadline);
+                var htmlBody = BuildEventEmailHtml(evt, user.FirstName, token.Token, header: "You're Invited: Event Announcement");
+
+                await _emailQueue.QueueSingleEmailAsync(
+                    to: user.Email,
+                    subject: $"You're invited: {evt.Title}",
+                    htmlBody: htmlBody,
+                    recipientName: $"{user.FirstName} {user.LastName}",
+                    campaignId: campaign.Id
+                );
+                count++;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to queue announcement email for user {UserId} {Email}", user.Id, user.Email);
+            }
+        }
+
+        // Update campaign recipient count
+        campaign.TotalRecipients = count;
+        await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Queued announcement campaign {CampaignId} for event {EventId} with {Count} recipients", campaign.Id, evt.Id, count);
+    }
+
+    private bool IsValidEmail(string? email)
+    {
+        if (string.IsNullOrWhiteSpace(email)) return false;
+        try
+        {
+            var addr = new System.Net.Mail.MailAddress(email);
+            return addr.Address == email;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private async Task ScheduleEventReminderJobs(Event evt)
+    {
+        // Schedule two jobs:
+        // 1) 2 days before RSVP deadline (non-RSVP users, with RSVP buttons)
+        // 2) 1 day before event (attendee reminder to YES RSVPs, no RSVP buttons)
+
+        var central = TimeZoneInfo.FindSystemTimeZoneById("America/Chicago");
+        var eventDateCentral = TimeZoneInfo.ConvertTimeFromUtc(evt.EventDate, central).Date;
+        var rsvpDeadlineCentral = TimeZoneInfo.ConvertTimeFromUtc(evt.RsvpDeadline, central).Date;
+
+        DateTime ToUtcCentral(DateTime local) => TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(local, DateTimeKind.Unspecified), central);
+
+        // 2 days before RSVP deadline at 9:00 AM CT
+        var deadlineReminderLocal = rsvpDeadlineCentral.AddDays(-2).AddHours(9);
+        var deadlineWhenUtc = ToUtcCentral(deadlineReminderLocal);
+        var deadlineScheduledFor = deadlineWhenUtc < DateTime.UtcNow ? DateTime.UtcNow.AddMinutes(1) : deadlineWhenUtc;
+
+        var existsDeadline = await _context.ScheduledEmailJobs.AnyAsync(j =>
+            j.JobType == "EventRsvpDeadlineReminder" &&
+            j.EntityType == "Event" &&
+            j.EntityId == evt.Id.ToString() &&
+            j.Status == "Active");
+        if (!existsDeadline)
+        {
+            _context.ScheduledEmailJobs.Add(new ScheduledEmailJob
+            {
+                JobType = "EventRsvpDeadlineReminder",
+                EntityType = "Event",
+                EntityId = evt.Id.ToString(),
+                ScheduledFor = deadlineScheduledFor,
+                Status = "Active",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            });
+        }
+
+        // 1 day before event at 9:00 AM CT
+        var attendeeReminderLocal = eventDateCentral.AddDays(-1).AddHours(9);
+        var attendeeWhenUtc = ToUtcCentral(attendeeReminderLocal);
+        var attendeeScheduledFor = attendeeWhenUtc < DateTime.UtcNow ? DateTime.UtcNow.AddMinutes(1) : attendeeWhenUtc;
+
+        var existsAttendee = await _context.ScheduledEmailJobs.AnyAsync(j =>
+            j.JobType == "EventAttendeeReminder" &&
+            j.EntityType == "Event" &&
+            j.EntityId == evt.Id.ToString() &&
+            j.Status == "Active");
+        if (!existsAttendee)
+        {
+            _context.ScheduledEmailJobs.Add(new ScheduledEmailJob
+            {
+                JobType = "EventAttendeeReminder",
+                EntityType = "Event",
+                EntityId = evt.Id.ToString(),
+                ScheduledFor = attendeeScheduledFor,
+                Status = "Active",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            });
+        }
+
+        await _context.SaveChangesAsync();
+        _logger.LogInformation("Scheduled RSVP deadline and attendee reminder jobs for event {EventId}", evt.Id);
+    }
+
+    private string BuildEventEmailHtml(Event evt, string firstName, string rsvpToken, string header = "Upcoming Event Reminder")
+    {
+        var apiBase = _configuration["App:ApiUrl"] ?? "http://localhost:5001/api";
+        var yesUrl = $"{apiBase}/email-rsvp/respond?token={Uri.EscapeDataString(rsvpToken)}&response=yes";
+        var noUrl = $"{apiBase}/email-rsvp/respond?token={Uri.EscapeDataString(rsvpToken)}&response=no";
+        var yesWithGuestUrl = evt.AllowPlusOne
+            ? $"{apiBase}/email-rsvp/respond?token={Uri.EscapeDataString(rsvpToken)}&response=yes&plusOne=true"
+            : null;
+        // No .ics link here; attachment and link are only in final attendee reminder
+
+        var central = TimeZoneInfo.FindSystemTimeZoneById("America/Chicago");
+        var eventDateLocal = TimeZoneInfo.ConvertTimeFromUtc(evt.EventDate, central);
+        var dateStr = eventDateLocal.ToString("dddd, MMMM dd, yyyy");
+        var start = DateTime.Today.Add(evt.StartTime).ToString("h:mm tt");
+        var end = DateTime.Today.Add(evt.EndTime).ToString("h:mm tt");
+
+        return $@"<!DOCTYPE html>
+        <html>
+        <head><meta charset='utf-8' /><title>{evt.Title} - Reminder</title></head>
+        <body style='font-family: -apple-system, BlinkMacSystemFont, Inter, Segoe UI, Roboto, sans-serif; background: #fdf8f1; padding: 24px; color: #212529;'>
+          <div style='max-width:600px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.07)'>
+            <div style='background:#6B3AA0;color:#fff;padding:20px'>
+              <h1 style='margin:0;font-size:22px'>{header}</h1>
+            </div>
+            <div style='padding:24px'>
+              <p style='margin-top:0'>Hello {firstName},</p>
+              <p>Reminder for <strong>{evt.Title}</strong>.</p>
+              <ul>
+                <li><strong>Date:</strong> {dateStr}</li>
+                <li><strong>Time:</strong> {start} – {end} CT</li>
+                <li><strong>Location:</strong> {evt.Location}</li>
+                <li><strong>Speaker:</strong> {evt.Speaker}</li>
+                {(evt.AllowPlusOne ? "<li><strong>Guests:</strong> Plus-one allowed</li>" : "")}
+              </ul>
+              <p>Please RSVP below:</p>
+              <div style='text-align:center;margin:24px 0'>
+                <a href='{yesUrl}' style='background:#22c55e;color:#fff;padding:12px 18px;border-radius:8px;text-decoration:none;margin-right:12px;display:inline-block'>RSVP Yes</a>
+                {(yesWithGuestUrl != null ? $"<a href='{yesWithGuestUrl}' style='background:#16a34a;color:#fff;padding:12px 18px;border-radius:8px;text-decoration:none;margin-right:12px;display:inline-block'>RSVP Yes + Guest</a>" : "")}
+                <a href='{noUrl}' style='background:#ef4444;color:#fff;padding:12px 18px;border-radius:8px;text-decoration:none;display:inline-block'>RSVP No</a>
+              </div>
+              
+              <p style='color:#6b7280;font-size:14px'>If the buttons don't work, copy and paste these links into your browser:<br/>
+                Yes: {yesUrl}<br/>
+                {(yesWithGuestUrl != null ? $"Yes + Guest: {yesWithGuestUrl}<br/>" : "")}
+                No: {noUrl}
+                
+              </p>
+            </div>
+            <div style='background:#F5F2ED;color:#6b7280;padding:16px;text-align:center;font-size:12px'>
+              Birmingham Committee on Foreign Relations
+            </div>
+          </div>
+        </body>
+        </html>";
+    }
+
+    private async Task<EmailCampaign> EnsureRsvpConfirmationCampaign(Event evt)
+    {
+        var name = $"RSVP Confirmation - {evt.Id}";
+        var existing = await _context.EmailCampaigns.FirstOrDefaultAsync(c => c.Name == name && c.Type == "EventRsvpConfirmation");
+        if (existing != null) return existing;
+
+        var campaign = new EmailCampaign
+        {
+            Name = name,
+            Type = "EventRsvpConfirmation",
+            Status = "Active",
+            TotalRecipients = 0,
+            CreatedAt = DateTime.UtcNow
+        };
+        _context.EmailCampaigns.Add(campaign);
+        await _context.SaveChangesAsync();
+        return campaign;
+    }
+
+    private string BuildRsvpConfirmationHtml(Event evt, string firstName)
+    {
+        var apiBase = _configuration["App:ApiUrl"] ?? "http://localhost:5001/api";
+        var icsUrl = $"{apiBase}/events/{evt.Id}/calendar.ics";
+        var central = TimeZoneInfo.FindSystemTimeZoneById("America/Chicago");
+        var eventDateLocal = TimeZoneInfo.ConvertTimeFromUtc(evt.EventDate, central);
+        var dateStr = eventDateLocal.ToString("dddd, MMMM dd, yyyy");
+        var start = DateTime.Today.Add(evt.StartTime).ToString("h:mm tt");
+        var end = DateTime.Today.Add(evt.EndTime).ToString("h:mm tt");
+
+        return $@"<!DOCTYPE html>
+        <html>
+        <head><meta charset='utf-8' /><title>{evt.Title} - RSVP Confirmation</title></head>
+        <body style='font-family: -apple-system, BlinkMacSystemFont, Inter, Segoe UI, Roboto, sans-serif; background: #fdf8f1; padding: 24px; color: #212529;'>
+          <div style='max-width:600px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.07)'>
+            <div style='background:#6B3AA0;color:#fff;padding:20px'>
+              <h1 style='margin:0;font-size:22px'>RSVP Confirmed</h1>
+            </div>
+            <div style='padding:24px'>
+              <p style='margin-top:0'>Hello {firstName},</p>
+              <p>Thanks for RSVP'ing <strong>YES</strong> to <strong>{evt.Title}</strong>.</p>
+              <ul>
+                <li><strong>Date:</strong> {dateStr}</li>
+                <li><strong>Time:</strong> {start} – {end} CT</li>
+                <li><strong>Location:</strong> {evt.Location}</li>
+                <li><strong>Speaker:</strong> {evt.Speaker}</li>
+              </ul>
+              <div style='text-align:center;margin:12px 0'>
+                <a href='{icsUrl}' style='background:#4263EB;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;display:inline-block'>Add to Calendar (.ics)</a>
+              </div>
+              <p style='color:#6b7280;font-size:14px'>Calendar: {icsUrl}</p>
+            </div>
+            <div style='background:#F5F2ED;color:#6b7280;padding:16px;text-align:center;font-size:12px'>
+              Birmingham Committee on Foreign Relations
+            </div>
+          </div>
+        </body>
+        </html>";
     }
 }

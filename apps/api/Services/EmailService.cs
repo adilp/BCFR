@@ -7,6 +7,9 @@ using Microsoft.Extensions.Logging;
 using Resend;
 using Microsoft.Extensions.Options;
 using System.Net.Http;
+using System.Net.Mail;
+using System.Text;
+using System.Security.Cryptography;
 
 namespace MemberOrgApi.Services
 {
@@ -668,7 +671,7 @@ namespace MemberOrgApi.Services
             }
         }
 
-        public async Task<bool> SendCustomEmailAsync(string toEmail, string subject, string htmlBody, string? textBody = null)
+        public async Task<bool> SendCustomEmailAsync(string toEmail, string subject, string htmlBody, string? textBody = null, List<EmailAttachment>? attachments = null)
         {
             try
             {
@@ -680,6 +683,21 @@ namespace MemberOrgApi.Services
                     HtmlBody = htmlBody,
                     TextBody = textBody
                 };
+
+                // Map optional attachments if provided
+                if (attachments != null && attachments.Count > 0)
+                {
+                    var resendAttachments = new List<Resend.EmailAttachment>();
+                    foreach (var a in attachments)
+                    {
+                        resendAttachments.Add(new Resend.EmailAttachment
+                        {
+                            Filename = a.FileName,
+                            Content = Convert.FromBase64String(a.Base64Content)
+                        });
+                    }
+                    message.Attachments = resendAttachments;
+                }
 
                 await _resend.EmailSendAsync(message);
                 _logger.LogInformation("Custom email sent to " + toEmail + " with subject: " + subject);
@@ -1263,5 +1281,6 @@ Birmingham Committee on Foreign Relations
                 return false;
             }
         }
+
     }
 }
