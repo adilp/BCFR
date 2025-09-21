@@ -1075,7 +1075,7 @@ public class EventsController : ControllerBase
         var yesWithGuestUrl = evt.AllowPlusOne
             ? $"{apiBase}/email-rsvp/respond?token={Uri.EscapeDataString(rsvpToken)}&response=yes&plusOne=true"
             : null;
-        var icsUrl = $"{apiBase}/events/{evt.Id}/calendar.ics";
+        // No .ics link here; attachment and link are only in final attendee reminder
 
         var central = TimeZoneInfo.FindSystemTimeZoneById("America/Chicago");
         var eventDateLocal = TimeZoneInfo.ConvertTimeFromUtc(evt.EventDate, central);
@@ -1107,14 +1107,12 @@ public class EventsController : ControllerBase
                 {(yesWithGuestUrl != null ? $"<a href='{yesWithGuestUrl}' style='background:#16a34a;color:#fff;padding:12px 18px;border-radius:8px;text-decoration:none;margin-right:12px;display:inline-block'>RSVP Yes + Guest</a>" : "")}
                 <a href='{noUrl}' style='background:#ef4444;color:#fff;padding:12px 18px;border-radius:8px;text-decoration:none;display:inline-block'>RSVP No</a>
               </div>
-              <div style='text-align:center;margin:12px 0'>
-                <a href='{icsUrl}' style='background:#4263EB;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;display:inline-block'>Add to Calendar (.ics)</a>
-              </div>
+              
               <p style='color:#6b7280;font-size:14px'>If the buttons don't work, copy and paste these links into your browser:<br/>
                 Yes: {yesUrl}<br/>
                 {(yesWithGuestUrl != null ? $"Yes + Guest: {yesWithGuestUrl}<br/>" : "")}
                 No: {noUrl}
-                <br/>Calendar: {icsUrl}
+                
               </p>
             </div>
             <div style='background:#F5F2ED;color:#6b7280;padding:16px;text-align:center;font-size:12px'>

@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using MemberOrgApi.Data;
@@ -379,7 +380,35 @@ public class EmailBackgroundService : BackgroundService
                     item.PlainTextBody = StripHtml(item.HtmlBody);
                 }
 
-                var ok = await emailService.SendCustomEmailAsync(item.RecipientEmail, item.Subject, item.HtmlBody, item.PlainTextBody);
+                // Attach ICS only for final attendee reminders
+                List<EmailAttachment>? attachments = null;
+                if (item.CampaignId != null)
+                {
+                    var campaign = await db.EmailCampaigns.FirstOrDefaultAsync(c => c.Id == item.CampaignId.Value, ct);
+                    if (campaign?.Type == "EventAttendeeReminder")
+                    {
+                        var maybeEventId = TryExtractEventIdFromIcsLink(item.HtmlBody);
+                        if (maybeEventId != null)
+                        {
+                            var evt = await db.Events.FirstOrDefaultAsync(e => e.Id == maybeEventId.Value, ct);
+                            if (evt != null)
+                            {
+                                var icsContent = BuildIcsForEvent(evt);
+                                attachments = new List<EmailAttachment>
+                                {
+                                    new EmailAttachment
+                                    {
+                                        FileName = $"event-{evt.Id}.ics",
+                                        ContentType = "text/calendar",
+                                        Base64Content = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(icsContent))
+                                    }
+                                };
+                            }
+                        }
+                    }
+                }
+
+                var ok = await emailService.SendCustomEmailAsync(item.RecipientEmail, item.Subject, item.HtmlBody, item.PlainTextBody, attachments);
 
                 if (ok)
                 {
@@ -428,5 +457,42 @@ public class EmailBackgroundService : BackgroundService
         var text = Regex.Replace(html, "<[^>]+>", string.Empty);
         text = System.Net.WebUtility.HtmlDecode(text);
         return text.Trim();
+    }
+
+    private static Guid? TryExtractEventIdFromIcsLink(string html)
+    {
+        if (string.IsNullOrEmpty(html)) return null;
+        // Looks for /events/{GUID}/calendar.ics
+        var match = Regex.Match(html, @"/events/([0-9a-fA-F\-]{36})/calendar\.ics");
+        if (match.Success && Guid.TryParse(match.Groups[1].Value, out var id))
+        {
+            return id;
+        }
+        return null;
+    }
+
+    private static string BuildIcsForEvent(Event evt)
+    {
+        // Compute start/end in UTC based on Central time date + times
+        var central = TimeZoneInfo.FindSystemTimeZoneById("America/Chicago");
+        var eventDateLocalDate = TimeZoneInfo.ConvertTimeFromUtc(evt.EventDate, central).Date;
+        var startLocal = eventDateLocalDate.Add(evt.StartTime);
+        var endLocal = eventDateLocalDate.Add(evt.EndTime);
+        var startUtc = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(startLocal, DateTimeKind.Unspecified), central);
+        var endUtc = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(endLocal, DateTimeKind.Unspecified), central);
+
+        static string FormatIcsDate(DateTime dt) => dt.ToUniversalTime().ToString("yyyyMMdd'T'HHmmss'Z'");
+
+        return $@"BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//BCFR//Events//EN\r\nCALSCALE:GREGORIAN\r\nMETHOD:PUBLISH\r\nBEGIN:VEVENT\r\nUID:{evt.Id}@birminghamforeignrelations.org\r\nDTSTAMP:{FormatIcsDate(DateTime.UtcNow)}\r\nDTSTART:{FormatIcsDate(startUtc)}\r\nDTEND:{FormatIcsDate(endUtc)}\r\nSUMMARY:{EscapeIcsText(evt.Title)}\r\nDESCRIPTION:{EscapeIcsText(evt.Description)}\r\nLOCATION:{EscapeIcsText(evt.Location)}\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n";
+    }
+
+    private static string EscapeIcsText(string? input)
+    {
+        if (string.IsNullOrEmpty(input)) return string.Empty;
+        return input
+            .Replace("\\", "\\\\")
+            .Replace(";", "\\;")
+            .Replace(",", "\\,")
+            .Replace("\n", "\\n");
     }
 }
