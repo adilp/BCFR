@@ -178,8 +178,8 @@ namespace MemberOrgApi.Controllers
                     successMessage += " We've also noted that you'll be bringing a guest.";
                 }
 
-                // If RSVP is YES (new or changed to yes), queue confirmation email with ICS
-                if (response == "yes" && (isNewRsvp || previousResponse != "yes"))
+                // If RSVP is YES, queue confirmation email with ICS (always send)
+                if (response == "yes")
                 {
                     try
                     {

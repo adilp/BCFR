@@ -494,8 +494,8 @@ public class EventsController : ControllerBase
         _logger.LogInformation("RSVP created/updated: EventId={EventId}, UserId={UserId}, Response={Response}", 
             id, userId, createDto.Response);
 
-        // Queue RSVP confirmation email if this is a YES and it's new or changed to yes
-        if (createDto.Response == "yes" && (isNewRsvp || previousResponse != "yes"))
+        // Queue RSVP confirmation email on YES (always send)
+        if (createDto.Response == "yes")
         {
             try
             {
