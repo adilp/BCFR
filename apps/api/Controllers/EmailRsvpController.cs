@@ -75,13 +75,7 @@ namespace MemberOrgApi.Controllers
                         "text/html");
                 }
 
-                // Check if RSVP deadline has passed
-                if (DateTime.UtcNow > evt.RsvpDeadline)
-                {
-                    return Content(GenerateHtmlResponse(false, "RSVP Deadline Passed",
-                        $"Sorry, the RSVP deadline for \"{evt.Title}\" has passed."),
-                        "text/html");
-                }
+                // Allow RSVPs even if the deadline has passed
 
                 // Check if event is full (only for "yes" responses)
                 if (response == "yes" && evt.MaxAttendees.HasValue)

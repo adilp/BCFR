@@ -381,11 +381,7 @@ public class EventsController : ControllerBase
             return NotFound(new { message = "Event not found" });
         }
 
-        // Check if RSVP deadline has passed
-        if (DateTime.UtcNow > evt.RsvpDeadline)
-        {
-            return BadRequest(new { message = "RSVP deadline has passed" });
-        }
+        // Allow RSVPs even if the deadline has passed
 
         // Check if event is full (only for "yes" responses)
         if (createDto.Response == "yes" && evt.MaxAttendees.HasValue)

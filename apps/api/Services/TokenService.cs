@@ -69,11 +69,7 @@ namespace MemberOrgApi.Services
                 return null;
             }
 
-            if (DateTime.UtcNow > rsvpToken.ExpiresAt)
-            {
-                _logger.LogWarning($"Token expired: {token}");
-                return null;
-            }
+            // Allow RSVP tokens to be used after their ExpiresAt to support post-deadline RSVPs
 
             return rsvpToken;
         }
