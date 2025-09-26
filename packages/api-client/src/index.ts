@@ -251,6 +251,13 @@ export class ApiClient {
     });
   }
 
+  async createUser(data: import('@memberorg/shared').AdminCreateUserRequest): Promise<AdminUser> {
+    return this.request<AdminUser>(`/admin/users`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
   async recordCheckPayment(
     userId: string, 
     data: { 

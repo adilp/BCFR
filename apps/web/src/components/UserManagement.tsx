@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import UserDetailsDrawer from './UserDetailsDrawer';
+import AddUserDrawer from './AddUserDrawer';
 import { getApiClient } from '@memberorg/api-client';
 import type { AdminUser } from '@memberorg/shared';
 import { formatAddress, formatDateForDisplay } from '@memberorg/shared';
@@ -16,6 +17,7 @@ import './UserManagement.css';
 function UserManagement() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
+  const [showAddUser, setShowAddUser] = useState(false);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState('all');
@@ -122,7 +124,7 @@ function UserManagement() {
       <div className="management-header">
         <h2 className="management-title">User Management</h2>
         <div className="management-actions">
-          <button className="btn btn-primary">
+          <button className="btn btn-primary" onClick={() => setShowAddUser(true)}>
             <PlusIcon className="icon-xs" />
             Add User
           </button>
@@ -390,6 +392,17 @@ function UserManagement() {
           user={selectedUser}
           onClose={() => setSelectedUser(null)}
           onSave={handleSaveUser}
+        />
+      )}
+
+      {showAddUser && (
+        <AddUserDrawer
+          onClose={() => setShowAddUser(false)}
+          onCreated={(created) => {
+            // Prepend to current list and open details so admin can record payment
+            setUsers(prev => [created, ...prev]);
+            setSelectedUser(created);
+          }}
         />
       )}
     </div>

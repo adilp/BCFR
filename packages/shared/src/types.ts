@@ -37,6 +37,25 @@ export interface AdminUser extends User {
   amount?: number;
 }
 
+// Admin create user request/response
+export interface AdminCreateUserRequest {
+  firstName: string;
+  lastName: string;
+  email: string;
+  username?: string;
+  role?: 'Admin' | 'Member';
+  isActive?: boolean;
+  phone?: string;
+  dateOfBirth?: string; // ISO date (YYYY-MM-DD)
+  address?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  country?: string;
+}
+
+export type AdminCreateUserResponse = AdminUser;
+
 export interface LoginRequest {
   username: string;
   password: string;

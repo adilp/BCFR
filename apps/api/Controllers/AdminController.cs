@@ -25,6 +25,110 @@ public class AdminController : ControllerBase
         _activityLogService = activityLogService;
     }
 
+    [HttpPost("users")]
+    public async Task<ActionResult<UserAdminResponse>> CreateUser(AdminCreateUserRequest request)
+    {
+        try
+        {
+            // Basic validation
+            if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.FirstName) || string.IsNullOrWhiteSpace(request.LastName))
+            {
+                return BadRequest(new { message = "Email, first name, and last name are required" });
+            }
+
+            // Enforce unique email
+            var emailExists = await _context.Users.AnyAsync(u => u.Email == request.Email);
+            if (emailExists)
+            {
+                return Conflict(new { message = "Email already exists" });
+            }
+
+            // Determine username
+            string username = request.Username ?? (request.Email.Contains('@') ? request.Email.Split('@')[0] : request.Email);
+            username = username.Trim();
+            if (string.IsNullOrEmpty(username)) username = $"user{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
+
+            // Ensure unique username by appending numeric suffix if needed
+            var baseUsername = username;
+            int suffix = 1;
+            while (await _context.Users.AnyAsync(u => u.Username == username))
+            {
+                username = $"{baseUsername}{suffix}";
+                suffix++;
+            }
+
+            // Generate a secure random password and hash it
+            var randomPassword = Guid.NewGuid().ToString("N");
+            var passwordHash = BCrypt.Net.BCrypt.HashPassword(randomPassword);
+
+            var role = !string.IsNullOrWhiteSpace(request.Role) && Roles.IsValidRole(request.Role)
+                ? request.Role
+                : Roles.Member;
+
+            var user = new User
+            {
+                Username = username,
+                Email = request.Email,
+                PasswordHash = passwordHash,
+                FirstName = request.FirstName,
+                LastName = request.LastName,
+                DateOfBirth = request.DateOfBirth,
+                Phone = request.Phone,
+                Address = request.Address,
+                City = request.City,
+                State = request.State,
+                ZipCode = request.ZipCode,
+                Country = request.Country ?? "United States",
+                Role = role,
+                IsActive = request.IsActive ?? true,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+
+            // Log admin action
+            var currentAdminIdString = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (Guid.TryParse(currentAdminIdString, out var adminId))
+            {
+                await _activityLogService.LogAdminActionAsync(
+                    user.Id,
+                    adminId,
+                    "AdminCreateUser",
+                    $"Admin created user {user.Email} ({user.Username}) with role {user.Role}");
+            }
+
+            // Prepare response
+            var response = new UserAdminResponse
+            {
+                Id = user.Id,
+                Username = user.Username,
+                Email = user.Email,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Role = user.Role,
+                IsActive = user.IsActive,
+                DateOfBirth = user.DateOfBirth,
+                Phone = user.Phone,
+                Address = user.Address,
+                City = user.City,
+                State = user.State,
+                ZipCode = user.ZipCode,
+                Country = user.Country,
+                CreatedAt = user.CreatedAt,
+                UpdatedAt = user.UpdatedAt,
+                DietaryRestrictions = user.DietaryRestrictions
+            };
+
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating user by admin");
+            return StatusCode(500, new { message = "An error occurred while creating the user" });
+        }
+    }
+
     [HttpGet("users")]
     public async Task<ActionResult<IEnumerable<UserAdminResponse>>> GetAllUsers(
         [FromQuery] int page = 1,
