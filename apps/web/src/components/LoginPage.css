@@ -108,6 +108,13 @@
   color: var(--text-secondary);
 }
 
+.field-inline-help {
+  margin-left: 6px;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  cursor: help;
+}
+
 .form-group input {
   width: 100%;
   padding: var(--space-md);

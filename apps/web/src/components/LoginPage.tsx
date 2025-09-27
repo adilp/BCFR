@@ -77,14 +77,23 @@ const LoginPage = () => {
             )}
             
             <div className="form-group">
-              <label htmlFor="username">Username</label>
+              <label htmlFor="username">
+                Username or Email
+                <span
+                  className="field-inline-help"
+                  title="You can use either your username or your email address to sign in."
+                  aria-label="Help: You can use username or email"
+                >
+                  ⓘ
+                </span>
+              </label>
               <input
                 type="text"
                 id="username"
                 name="username"
                 value={formData.username}
                 onChange={handleInputChange}
-                placeholder="Enter your username"
+                placeholder="Enter your username or email"
                 required
                 disabled={isLoading}
               />

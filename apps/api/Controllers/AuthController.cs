@@ -140,8 +140,18 @@ public class AuthController : ControllerBase
     {
         try
         {
-            // Find user by username
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == request.Username);
+            // Allow login by username or email
+            var loginId = (request.Username ?? string.Empty).Trim();
+            User? user = null;
+            if (loginId.Contains('@'))
+            {
+                var loginLower = loginId.ToLower();
+                user = await _context.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == loginLower);
+            }
+            else
+            {
+                user = await _context.Users.FirstOrDefaultAsync(u => u.Username == loginId);
+            }
             
             if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
             {
