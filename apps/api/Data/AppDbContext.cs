@@ -17,6 +17,7 @@ public class AppDbContext : DbContext
     public DbSet<Event> Events { get; set; }
     public DbSet<EventRsvp> EventRsvps { get; set; }
     public DbSet<RsvpToken> RsvpTokens { get; set; }
+    public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
     public DbSet<EmailCampaign> EmailCampaigns { get; set; }
     public DbSet<EmailQueueItem> EmailQueue { get; set; }
     public DbSet<ScheduledEmailJob> ScheduledEmailJobs { get; set; }
@@ -241,6 +242,25 @@ public class AppDbContext : DbContext
 
             entity.HasIndex(e => new { e.Status, e.ScheduledFor, e.NextRunDate }).HasDatabaseName("IX_ScheduledEmailJobs_Active");
             entity.HasIndex(e => new { e.EntityType, e.EntityId }).HasDatabaseName("IX_ScheduledEmailJobs_Entity");
+        });
+
+        // Configure PasswordResetToken entity
+        modelBuilder.Entity<PasswordResetToken>(entity =>
+        {
+            entity.ToTable("PasswordResetTokens");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Token).IsRequired().HasMaxLength(255);
+            entity.HasIndex(e => e.Token).IsUnique();
+            entity.Property(e => e.RequestedIp).HasMaxLength(45);
+
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => e.ExpiresAt);
+            entity.HasIndex(e => e.CreatedAt);
         });
     }
 }

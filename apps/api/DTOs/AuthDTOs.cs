@@ -33,3 +33,14 @@ public class LoginResponse
     public string Role { get; set; } = string.Empty;
     public DateTime ExpiresAt { get; set; }
 }
+
+public class ForgotPasswordRequest
+{
+    public string EmailOrUsername { get; set; } = string.Empty;
+}
+
+public class ResetPasswordRequest
+{
+    public string Token { get; set; } = string.Empty;
+    public string NewPassword { get; set; } = string.Empty;
+}

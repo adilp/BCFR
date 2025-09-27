@@ -10,6 +10,8 @@ using MemberOrgApi.Models;
 using MemberOrgApi.Services;
 using MemberOrgApi.Constants;
 using Microsoft.AspNetCore.Authorization;
+using MemberOrgApi.DTOs;
+using MemberOrgApi.Constants;
 
 namespace MemberOrgApi.Controllers;
 
@@ -210,6 +212,111 @@ public class AuthController : ControllerBase
         {
             _logger.LogError(ex, "Error during login");
             return StatusCode(500, new { message = "An error occurred during login" });
+        }
+    }
+
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
+    {
+        try
+        {
+            var id = (request.EmailOrUsername ?? string.Empty).Trim();
+            if (string.IsNullOrEmpty(id))
+                return Ok(new { message = "If an account exists, a reset email has been sent." });
+
+            User? user = null;
+            if (id.Contains('@'))
+            {
+                var idLower = id.ToLower();
+                user = await _context.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == idLower);
+            }
+            else
+            {
+                user = await _context.Users.FirstOrDefaultAsync(u => u.Username == id);
+            }
+
+            if (user != null)
+            {
+                // Generate reset token (1 hour expiry)
+                var tokenService = HttpContext.RequestServices.GetRequiredService<ITokenService>();
+                var tokenString = tokenService.GenerateSecureToken();
+
+                var resetToken = new PasswordResetToken
+                {
+                    UserId = user.Id,
+                    Token = tokenString,
+                    CreatedAt = DateTime.UtcNow,
+                    ExpiresAt = DateTime.UtcNow.AddHours(1),
+                    RequestedIp = HttpContext.Connection.RemoteIpAddress?.ToString()
+                };
+
+                _context.PasswordResetTokens.Add(resetToken);
+                await _context.SaveChangesAsync();
+
+                await _emailService.SendPasswordResetEmailAsync(user.Email, tokenString);
+
+                // Optional: log password reset request
+                await _activityLogService.LogActivityAsync(
+                    user.Id,
+                    ActivityTypes.PasswordReset,
+                    ActivityCategories.Authentication,
+                    "Password reset requested");
+            }
+
+            // Always return OK to prevent account enumeration
+            return Ok(new { message = "If an account exists, a reset email has been sent." });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during forgot-password");
+            // Still return OK to avoid enumeration
+            return Ok(new { message = "If an account exists, a reset email has been sent." });
+        }
+    }
+
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(request.Token) || string.IsNullOrWhiteSpace(request.NewPassword))
+            {
+                return BadRequest(new { message = "Invalid request" });
+            }
+
+            var token = await _context.PasswordResetTokens
+                .Include(t => t.User)
+                .FirstOrDefaultAsync(t => t.Token == request.Token);
+
+            if (token == null || token.UsedAt != null || token.ExpiresAt < DateTime.UtcNow || token.User == null)
+            {
+                return BadRequest(new { message = "Invalid or expired token" });
+            }
+
+            // Update password
+            token.User.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+            token.User.UpdatedAt = DateTime.UtcNow;
+            token.UsedAt = DateTime.UtcNow;
+
+            // Invalidate sessions for this user
+            var sessions = _context.Sessions.Where(s => s.UserId == token.UserId);
+            _context.Sessions.RemoveRange(sessions);
+
+            await _context.SaveChangesAsync();
+
+            // Log activity
+            await _activityLogService.LogActivityAsync(
+                token.UserId,
+                ActivityTypes.PasswordChange,
+                ActivityCategories.Authentication,
+                "Password reset completed");
+
+            return Ok(new { message = "Password has been reset" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during reset-password");
+            return StatusCode(500, new { message = "An error occurred during password reset" });
         }
     }
 

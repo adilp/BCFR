@@ -109,6 +109,20 @@ export class ApiClient {
     });
   }
 
+  async forgotPassword(data: import('@memberorg/shared').ForgotPasswordRequest): Promise<void> {
+    return this.request<void>('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async resetPassword(data: import('@memberorg/shared').ResetPasswordRequest): Promise<void> {
+    return this.request<void>('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
   // Profile endpoints
   async getProfile(): Promise<UserProfile> {
     return this.request<UserProfile>('/profile');

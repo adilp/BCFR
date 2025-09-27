@@ -256,3 +256,13 @@ export interface ApiError {
   errors?: Record<string, string[]>;
   statusCode?: number;
 }
+
+// Password reset requests
+export interface ForgotPasswordRequest {
+  emailOrUsername: string;
+}
+
+export interface ResetPasswordRequest {
+  token: string;
+  newPassword: string;
+}

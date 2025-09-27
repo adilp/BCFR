@@ -3,6 +3,8 @@ import LandingPage from './components/LandingPage'
 import MembershipPage from './components/MembershipPage'
 import AboutPage from './components/AboutPage'
 import LoginPage from './components/LoginPage'
+import ForgotPasswordPage from './components/ForgotPasswordPage'
+import ResetPasswordPage from './components/ResetPasswordPage'
 import MembershipSuccess from './components/MembershipSuccess'
 import ProfilePage from './components/ProfilePage'
 import EventsPage from './components/EventsPage'
@@ -43,6 +45,18 @@ const loginRoute = createRoute({
   component: LoginPage
 })
 
+const forgotPasswordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/forgot-password',
+  component: ForgotPasswordPage
+})
+
+const resetPasswordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/reset-password',
+  component: ResetPasswordPage
+})
+
 // Create membership success page route
 const membershipSuccessRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -80,7 +94,18 @@ const adminRoute = createRoute({
 })
 
 // Create the route tree
-const routeTree = rootRoute.addChildren([indexRoute, membershipRoute, membershipSuccessRoute, aboutRoute, loginRoute, profileRoute, eventsRoute, adminRoute])
+const routeTree = rootRoute.addChildren([
+  indexRoute,
+  membershipRoute,
+  membershipSuccessRoute,
+  aboutRoute,
+  loginRoute,
+  forgotPasswordRoute,
+  resetPasswordRoute,
+  profileRoute,
+  eventsRoute,
+  adminRoute
+])
 
 // Create the router
 export const router = createRouter({ routeTree })
