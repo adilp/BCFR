@@ -399,7 +399,7 @@ public class EmailBackgroundService : BackgroundService
                                     new EmailAttachment
                                     {
                                         FileName = $"event-{evt.Id}.ics",
-                                        ContentType = "text/calendar",
+                                        ContentType = "text/calendar; charset=UTF-8; method=PUBLISH",
                                         Base64Content = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(icsContent))
                                     }
                                 };
@@ -478,12 +478,58 @@ public class EmailBackgroundService : BackgroundService
         var eventDateLocalDate = TimeZoneInfo.ConvertTimeFromUtc(evt.EventDate, central).Date;
         var startLocal = eventDateLocalDate.Add(evt.StartTime);
         var endLocal = eventDateLocalDate.Add(evt.EndTime);
+        if (endLocal <= startLocal)
+        {
+            endLocal = startLocal.AddHours(1);
+        }
         var startUtc = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(startLocal, DateTimeKind.Unspecified), central);
         var endUtc = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(endLocal, DateTimeKind.Unspecified), central);
 
         static string FormatIcsDate(DateTime dt) => dt.ToUniversalTime().ToString("yyyyMMdd'T'HHmmss'Z'");
 
-        return $@"BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//BCFR//Events//EN\r\nCALSCALE:GREGORIAN\r\nMETHOD:PUBLISH\r\nBEGIN:VEVENT\r\nUID:{evt.Id}@birminghamforeignrelations.org\r\nDTSTAMP:{FormatIcsDate(DateTime.UtcNow)}\r\nDTSTART:{FormatIcsDate(startUtc)}\r\nDTEND:{FormatIcsDate(endUtc)}\r\nSUMMARY:{EscapeIcsText(evt.Title)}\r\nDESCRIPTION:{EscapeIcsText(evt.Description)}\r\nLOCATION:{EscapeIcsText(evt.Location)}\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n";
+        static string Fold(string line)
+        {
+            if (string.IsNullOrEmpty(line)) return string.Empty;
+            const int limit = 75;
+            if (line.Length <= limit) return line;
+            var sb = new System.Text.StringBuilder();
+            int idx = 0;
+            while (idx < line.Length)
+            {
+                int take = Math.Min(limit, line.Length - idx);
+                var chunk = line.Substring(idx, take);
+                if (idx > 0) sb.Append("\r\n ");
+                sb.Append(chunk);
+                idx += take;
+            }
+            return sb.ToString();
+        }
+
+        var prodId = "-//BCFR//Events//EN";
+        var organizerEmail = "no-reply@birminghamforeignrelations.org"; // fallback static organizer
+
+        var lines = new List<string>
+        {
+            "BEGIN:VCALENDAR",
+            "VERSION:2.0",
+            $"PRODID:{prodId}",
+            "CALSCALE:GREGORIAN",
+            "METHOD:PUBLISH",
+            "BEGIN:VEVENT",
+            $"UID:{evt.Id}@birminghamforeignrelations.org",
+            $"DTSTAMP:{FormatIcsDate(DateTime.UtcNow)}",
+            $"DTSTART:{FormatIcsDate(startUtc)}",
+            $"DTEND:{FormatIcsDate(endUtc)}",
+            Fold($"SUMMARY:{EscapeIcsText(evt.Title)}"),
+            Fold($"DESCRIPTION:{EscapeIcsText(evt.Description)}"),
+            Fold($"LOCATION:{EscapeIcsText(evt.Location)}"),
+            $"SEQUENCE:0",
+            $"ORGANIZER:MAILTO:{organizerEmail}",
+            "END:VEVENT",
+            "END:VCALENDAR"
+        };
+
+        return string.Join("\r\n", lines) + "\r\n";
     }
 
     private static string EscapeIcsText(string? input)

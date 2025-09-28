@@ -123,15 +123,63 @@ public class EventsController : ControllerBase
         var eventDateLocalDate = TimeZoneInfo.ConvertTimeFromUtc(evt.EventDate, central).Date;
         var startLocal = eventDateLocalDate.Add(evt.StartTime);
         var endLocal = eventDateLocalDate.Add(evt.EndTime);
+        if (endLocal <= startLocal)
+        {
+            endLocal = startLocal.AddHours(1);
+        }
         var startUtc = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(startLocal, DateTimeKind.Unspecified), central);
         var endUtc = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(endLocal, DateTimeKind.Unspecified), central);
 
         string FormatIcsDate(DateTime dt) => dt.ToUniversalTime().ToString("yyyyMMdd'T'HHmmss'Z'");
+        string Fold(string line)
+        {
+            if (string.IsNullOrEmpty(line)) return string.Empty;
+            const int limit = 75;
+            if (line.Length <= limit) return line;
+            var sb = new System.Text.StringBuilder();
+            int idx = 0;
+            while (idx < line.Length)
+            {
+                int take = Math.Min(limit, line.Length - idx);
+                var chunk = line.Substring(idx, take);
+                if (idx > 0) sb.Append("\r\n ");
+                sb.Append(chunk);
+                idx += take;
+            }
+            return sb.ToString();
+        }
 
-        var ics = $@"BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//BCFR//Events//EN\r\nCALSCALE:GREGORIAN\r\nMETHOD:PUBLISH\r\nBEGIN:VEVENT\r\nUID:{evt.Id}@birminghamforeignrelations.org\r\nDTSTAMP:{FormatIcsDate(DateTime.UtcNow)}\r\nDTSTART:{FormatIcsDate(startUtc)}\r\nDTEND:{FormatIcsDate(endUtc)}\r\nSUMMARY:{EscapeIcsText(evt.Title)}\r\nDESCRIPTION:{EscapeIcsText(evt.Description)}\r\nLOCATION:{EscapeIcsText(evt.Location)}\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n";
+        var prodId = "-//BCFR//Events//EN";
+        var organizerEmail = _configuration["Resend:FromEmail"] ?? _configuration["EmailQueue:FromEmail"] ?? "no-reply@birminghamforeignrelations.org";
+        var frontendBase = _configuration["App:BaseUrl"] ?? "http://localhost:5173";
+        var eventUrl = $"{frontendBase.TrimEnd('/')}/events"; // generic events page
+
+        var lines = new List<string>
+        {
+            "BEGIN:VCALENDAR",
+            "VERSION:2.0",
+            $"PRODID:{prodId}",
+            "CALSCALE:GREGORIAN",
+            "METHOD:PUBLISH",
+            "BEGIN:VEVENT",
+            $"UID:{evt.Id}@birminghamforeignrelations.org",
+            $"DTSTAMP:{FormatIcsDate(DateTime.UtcNow)}",
+            $"DTSTART:{FormatIcsDate(startUtc)}",
+            $"DTEND:{FormatIcsDate(endUtc)}",
+            Fold($"SUMMARY:{EscapeIcsText(evt.Title)}"),
+            Fold($"DESCRIPTION:{EscapeIcsText(evt.Description)}"),
+            Fold($"LOCATION:{EscapeIcsText(evt.Location)}"),
+            $"SEQUENCE:0",
+            $"ORGANIZER:MAILTO:{organizerEmail}",
+            Fold($"URL:{eventUrl}"),
+            "END:VEVENT",
+            "END:VCALENDAR"
+        };
+
+        var ics = string.Join("\r\n", lines) + "\r\n";
 
         Response.Headers["Content-Disposition"] = $"attachment; filename=event-{evt.Id}.ics";
-        return Content(ics, "text/calendar");
+        return Content(ics, "text/calendar; charset=utf-8; method=PUBLISH");
     }
 
     private static string EscapeIcsText(string? input)
