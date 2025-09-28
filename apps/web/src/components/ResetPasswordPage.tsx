@@ -1,5 +1,4 @@
 import { useState, useMemo } from 'react';
-import { useSearch } from '@tanstack/react-router';
 import Navigation from './Navigation';
 import { getApiClient } from '@memberorg/api-client';
 import './LoginPage.css';
