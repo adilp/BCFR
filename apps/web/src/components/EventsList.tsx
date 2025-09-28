@@ -179,10 +179,23 @@ const EventsList = ({ events: propEvents, showHeader = true, showDetails = false
           .map((event: Event): EventDisplay => formatEventForDisplay(event))
         setEvents(pastEvents)
       } else {
-        // Fetch upcoming events
+        // Fetch upcoming events (client-side filter by end time)
         const fetchedEvents = await apiClient.getEvents({ status: 'published' })
-        const formattedEvents: EventDisplay[] = fetchedEvents.map((event: Event) => formatEventForDisplay(event))
-        setEvents(formattedEvents)
+        const now = new Date()
+        const upcoming = fetchedEvents
+          .filter((event: Event) => {
+            const end = new Date(event.eventDate)
+            // Use endTime if available; fallback to eventTime; final fallback 23:59
+            const endStr = event.endTime || event.eventTime || '23:59'
+            const [h, m] = endStr.split(':')
+            const hh = parseInt(h || '23', 10)
+            const mm = parseInt(m || '59', 10)
+            end.setHours(hh, mm, 0, 0)
+            return end >= now
+          })
+          .sort((a: Event, b: Event) => new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime())
+          .map((event: Event): EventDisplay => formatEventForDisplay(event))
+        setEvents(upcoming)
       }
     } catch (error) {
       console.error('Failed to fetch events:', error)
