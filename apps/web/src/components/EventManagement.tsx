@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import EventDetailsDrawer from './EventDetailsDrawer';
 import { getApiClient } from '@memberorg/api-client';
 import type { Event, EventRsvp, CreateEventRequest } from '@memberorg/shared';
-import { formatDateForDisplay } from '@memberorg/shared';
+import { formatDateForDisplay, formatTimeTo12Hour } from '@memberorg/shared';
 import {
   MagnifyingGlassIcon,
   ChevronRightIcon,
@@ -297,7 +297,7 @@ function EventManagement() {
                     <CalendarIcon className="icon-xs" />
                     <div>
                       <div>{formatEventDate(event.eventDate)}</div>
-                      <div className="time-text">{event.eventTime} - {event.endTime}</div>
+                      <div className="time-text">{formatTimeTo12Hour(event.eventTime)} - {formatTimeTo12Hour(event.endTime)}</div>
                     </div>
                   </div>
                 </td>
