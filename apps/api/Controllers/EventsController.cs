@@ -475,25 +475,56 @@ public class EventsController : ControllerBase
         {
             // Create new RSVP
             isNewRsvp = true;
+
+            // Load User data first
+            var user = await _context.Users.FindAsync(userGuid);
+            if (user == null)
+            {
+                return NotFound(new { message = "User not found" });
+            }
+
             existingRsvp = new EventRsvp
             {
                 EventId = id,
                 UserId = userGuid,
+                User = user, // Attach the user object
                 Response = createDto.Response,
                 HasPlusOne = createDto.Response == "yes" ? createDto.HasPlusOne : false,
                 Notes = createDto.Notes,
                 ResponseDate = DateTime.UtcNow
             };
             _context.EventRsvps.Add(existingRsvp);
-            await _context.SaveChangesAsync();
-            
-            // Reload with User data
-            existingRsvp = await _context.EventRsvps
-                .Include(r => r.User)
-                .FirstAsync(r => r.Id == existingRsvp.Id);
         }
 
-        await _context.SaveChangesAsync();
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex) when (ex.InnerException?.Message?.Contains("IX_EventRsvps_EventId_UserId") ?? false)
+        {
+            // Handle race condition - RSVP was created by another request
+            _logger.LogWarning("Duplicate RSVP detected for EventId={EventId}, UserId={UserId}. Retrying update.", id, userGuid);
+
+            // Detach the duplicate entity
+            if (isNewRsvp)
+            {
+                _context.Entry(existingRsvp).State = EntityState.Detached;
+            }
+
+            // Re-fetch and update
+            existingRsvp = await _context.EventRsvps
+                .Include(r => r.User)
+                .FirstOrDefaultAsync(r => r.EventId == id && r.UserId == userGuid);
+
+            if (existingRsvp != null)
+            {
+                existingRsvp.Response = createDto.Response;
+                existingRsvp.HasPlusOne = createDto.Response == "yes" ? createDto.HasPlusOne : false;
+                existingRsvp.Notes = createDto.Notes;
+                existingRsvp.UpdatedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
+            }
+        }
         
         // Log the activity
         var activityType = createDto.Response == "yes" 
