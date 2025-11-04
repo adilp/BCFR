@@ -271,19 +271,7 @@ function EventDetailsDrawer({ event, isNew = false, onClose, onSave }: EventDeta
         <FormSection title="Email Invitation Message">
           <FormGroup
             label="Custom Email Note"
-            hint={
-              <div style={{ marginBottom: '8px' }}>
-                <div>This message will appear prominently at the top of event announcement emails.</div>
-                <div style={{ marginTop: '4px', fontSize: '12px', color: '#6b7280' }}>
-                  <strong>Formatting tips:</strong>
-                  <ul style={{ margin: '4px 0', paddingLeft: '20px' }}>
-                    <li>Single line break creates a new line</li>
-                    <li>Double line break creates a new paragraph</li>
-                    <li>Text will be automatically formatted for email display</li>
-                  </ul>
-                </div>
-              </div>
-            }
+            help="This message will appear prominently at the top of event announcement emails. Single line break creates a new line, double line break creates a new paragraph."
           >
             <textarea
               className="form-textarea"
