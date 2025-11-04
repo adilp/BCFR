@@ -18,6 +18,7 @@ public class Event
     public DateTime RsvpDeadline { get; set; }
     public int? MaxAttendees { get; set; }
     public bool AllowPlusOne { get; set; } = true;
+    public string? EmailNote { get; set; } // Custom note for email announcements
     public string Status { get; set; } = "draft"; // draft, published, cancelled
     public Guid? CreatedById { get; set; }
     public User? CreatedBy { get; set; }

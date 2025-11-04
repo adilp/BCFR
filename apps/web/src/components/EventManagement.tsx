@@ -91,6 +91,7 @@ function EventManagement() {
         rsvpDeadline: updatedEvent.rsvpDeadline,
         maxAttendees: updatedEvent.maxAttendees,
         allowPlusOne: updatedEvent.allowPlusOne,
+        emailNote: updatedEvent.emailNote,
         status: updatedEvent.status
       };
       

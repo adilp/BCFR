@@ -117,6 +117,7 @@ export interface Event {
   rsvpDeadline: string;
   maxAttendees?: number;
   allowPlusOne: boolean;
+  emailNote?: string;
   status: 'draft' | 'published' | 'cancelled';
   createdBy?: string;
   createdAt?: string;
@@ -157,6 +158,7 @@ export interface CreateEventRequest {
   rsvpDeadline: string;
   maxAttendees?: number;
   allowPlusOne: boolean;
+  emailNote?: string;
   status: 'draft' | 'published' | 'cancelled';
 }
 

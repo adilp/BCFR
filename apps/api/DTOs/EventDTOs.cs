@@ -15,6 +15,7 @@ public class EventDto
     public DateTime RsvpDeadline { get; set; }
     public int? MaxAttendees { get; set; }
     public bool AllowPlusOne { get; set; }
+    public string? EmailNote { get; set; }
     public string Status { get; set; } = string.Empty;
     public string? CreatedBy { get; set; }
     public DateTime CreatedAt { get; set; }
@@ -36,6 +37,7 @@ public class CreateEventDto
     public DateTime RsvpDeadline { get; set; }
     public int? MaxAttendees { get; set; }
     public bool AllowPlusOne { get; set; } = true;
+    public string? EmailNote { get; set; }
     public string Status { get; set; } = "draft";
 }
 
@@ -53,6 +55,7 @@ public class UpdateEventDto
     public DateTime RsvpDeadline { get; set; }
     public int? MaxAttendees { get; set; }
     public bool AllowPlusOne { get; set; }
+    public string? EmailNote { get; set; }
     public string Status { get; set; } = string.Empty;
 }
 

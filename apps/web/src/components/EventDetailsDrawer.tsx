@@ -34,6 +34,7 @@ function EventDetailsDrawer({ event, isNew = false, onClose, onSave }: EventDeta
         rsvpDeadline: formatForDateInput(rsvpDeadline),
         maxAttendees: undefined,
         allowPlusOne: true,
+        emailNote: '',
         status: 'draft' as const
       };
     }
@@ -264,6 +265,70 @@ function EventDetailsDrawer({ event, isNew = false, onClose, onSave }: EventDeta
               <option value="published">Published</option>
               <option value="cancelled">Cancelled</option>
             </select>
+          </FormGroup>
+        </FormSection>
+
+        <FormSection title="Email Invitation Message">
+          <FormGroup
+            label="Custom Email Note"
+            hint={
+              <div style={{ marginBottom: '8px' }}>
+                <div>This message will appear prominently at the top of event announcement emails.</div>
+                <div style={{ marginTop: '4px', fontSize: '12px', color: '#6b7280' }}>
+                  <strong>Formatting tips:</strong>
+                  <ul style={{ margin: '4px 0', paddingLeft: '20px' }}>
+                    <li>Single line break creates a new line</li>
+                    <li>Double line break creates a new paragraph</li>
+                    <li>Text will be automatically formatted for email display</li>
+                  </ul>
+                </div>
+              </div>
+            }
+          >
+            <textarea
+              className="form-textarea"
+              value={formData.emailNote || ''}
+              onChange={(e) => handleChange('emailNote', e.target.value)}
+              rows={10}
+              style={{
+                fontFamily: 'Georgia, serif',
+                fontSize: '14px',
+                lineHeight: '1.6',
+                padding: '12px',
+                backgroundColor: '#fafafa',
+                border: '2px solid #e5e7eb'
+              }}
+              placeholder={`Put note that will go in the email here`}
+            />
+            {formData.emailNote && (
+              <div style={{
+                marginTop: '12px',
+                padding: '12px',
+                backgroundColor: '#f3f4f6',
+                borderRadius: '6px',
+                border: '1px solid #d1d5db'
+              }}>
+                <div style={{ fontSize: '11px', fontWeight: '600', color: '#6b7280', marginBottom: '8px' }}>
+                  PREVIEW (how it will appear in emails):
+                </div>
+                <div style={{
+                  backgroundColor: '#f9fafb',
+                  borderLeft: '4px solid #6B3AA0',
+                  padding: '16px',
+                  borderRadius: '4px'
+                }}>
+                  <div style={{
+                    color: '#374151',
+                    lineHeight: '1.8',
+                    fontSize: '14px',
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    whiteSpace: 'pre-wrap'
+                  }}>
+                    {formData.emailNote}
+                  </div>
+                </div>
+              </div>
+            )}
           </FormGroup>
         </FormSection>
       </form>

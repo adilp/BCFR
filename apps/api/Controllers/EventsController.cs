@@ -241,6 +241,7 @@ public class EventsController : ControllerBase
             RsvpDeadline = rsvpDeadlineUtc,
             MaxAttendees = createDto.MaxAttendees,
             AllowPlusOne = createDto.AllowPlusOne,
+            EmailNote = createDto.EmailNote,
             Status = createDto.Status,
             CreatedById = Guid.Parse(userId),
             CreatedAt = DateTime.UtcNow
@@ -313,6 +314,7 @@ public class EventsController : ControllerBase
         evt.RsvpDeadline = rsvpDeadlineUtc;
         evt.MaxAttendees = updateDto.MaxAttendees;
         evt.AllowPlusOne = updateDto.AllowPlusOne;
+        evt.EmailNote = updateDto.EmailNote;
         evt.Status = updateDto.Status;
         evt.UpdatedAt = DateTime.UtcNow;
 
@@ -633,6 +635,7 @@ public class EventsController : ControllerBase
             RsvpDeadline = rsvpDeadlineCentral,
             MaxAttendees = evt.MaxAttendees,
             AllowPlusOne = evt.AllowPlusOne,
+            EmailNote = evt.EmailNote,
             Status = evt.Status,
             CreatedBy = evt.CreatedBy != null ? $"{evt.CreatedBy.FirstName} {evt.CreatedBy.LastName}" : null,
             CreatedAt = evt.CreatedAt,
@@ -1158,6 +1161,10 @@ public class EventsController : ControllerBase
             </div>
             <div style='padding:24px'>
               <p style='margin-top:0'>Hello {firstName},</p>
+              {(!string.IsNullOrWhiteSpace(evt.EmailNote) ?
+                $@"<div style='background:#f9fafb;border-left:4px solid #6B3AA0;padding:20px;margin:20px 0;border-radius:6px'>
+                    <div style='color:#374151;line-height:1.8;font-size:15px'>{FormatEmailNote(evt.EmailNote)}</div>
+                  </div>" : "")}
               <p>Reminder for <strong>{evt.Title}</strong>.</p>
               <ul>
                 <li><strong>Date:</strong> {dateStr}</li>
@@ -1228,6 +1235,10 @@ public class EventsController : ControllerBase
             <div style='padding:24px'>
               <p style='margin-top:0'>Hello {firstName},</p>
               <p>Thanks for RSVP'ing <strong>YES</strong> to <strong>{evt.Title}</strong>.</p>
+              {(!string.IsNullOrWhiteSpace(evt.EmailNote) ?
+                $@"<div style='background:#f9fafb;border-left:4px solid #6B3AA0;padding:20px;margin:20px 0;border-radius:6px'>
+                    <div style='color:#374151;line-height:1.8;font-size:15px'>{FormatEmailNote(evt.EmailNote)}</div>
+                  </div>" : "")}
               <ul>
                 <li><strong>Date:</strong> {dateStr}</li>
                 <li><strong>Time:</strong> {start} – {end} CT</li>
@@ -1245,5 +1256,22 @@ public class EventsController : ControllerBase
           </div>
         </body>
         </html>";
+    }
+
+    private string FormatEmailNote(string emailNote)
+    {
+        if (string.IsNullOrWhiteSpace(emailNote))
+            return string.Empty;
+
+        // First HTML encode the text to prevent XSS
+        var encoded = System.Web.HttpUtility.HtmlEncode(emailNote);
+
+        // Convert double line breaks to paragraphs
+        var paragraphs = encoded.Split(new[] { "\r\n\r\n", "\n\n" }, StringSplitOptions.None);
+        var formatted = string.Join("</p><p style='margin:10px 0'>",
+            paragraphs.Select(p => p.Replace("\r\n", "<br/>").Replace("\n", "<br/>")));
+
+        // Wrap in paragraph tags
+        return $"<p style='margin:10px 0'>{formatted}</p>";
     }
 }
