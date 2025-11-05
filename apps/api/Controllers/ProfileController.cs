@@ -32,45 +32,55 @@ public class ProfileController : ControllerBase
     [Authorize]
     public async Task<ActionResult<UserProfileDto>> GetProfile()
     {
-        _logger.LogInformation("GetProfile called. User claims: {Claims}", 
-            string.Join(", ", User.Claims.Select(c => $"{c.Type}={c.Value}")));
-            
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+        try
         {
-            _logger.LogWarning("Failed to parse user ID from claim: {Claim}", userIdClaim);
-            return Unauthorized();
+            _logger.LogInformation("GetProfile called");
+
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+            {
+                _logger.LogWarning("GetProfile failed - Invalid user ID in claims: {Claim}", userIdClaim);
+                return Unauthorized();
+            }
+
+            _logger.LogInformation("Retrieving profile for UserId: {UserId}", userId);
+
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+            {
+                _logger.LogWarning("GetProfile failed - User not found: {UserId}", userId);
+                return NotFound(new { message = "User not found" });
+            }
+
+            var profileDto = new UserProfileDto
+            {
+                Id = user.Id,
+                Username = user.Username,
+                Email = user.Email,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Role = user.Role,
+                DateOfBirth = user.DateOfBirth,
+                Phone = user.Phone,
+                Address = user.Address,
+                City = user.City,
+                State = user.State,
+                ZipCode = user.ZipCode,
+                Country = user.Country,
+                DietaryRestrictions = user.DietaryRestrictions,
+                CreatedAt = user.CreatedAt,
+                IsActive = user.IsActive
+            };
+
+            _logger.LogInformation("Successfully retrieved profile for UserId: {UserId}, Email: {Email}",
+                userId, user.Email);
+            return Ok(profileDto);
         }
-
-        _logger.LogInformation("Looking for user with ID: {UserId}", userId);
-
-        var user = await _context.Users.FindAsync(userId);
-        if (user == null)
+        catch (Exception ex)
         {
-            return NotFound();
+            _logger.LogError(ex, "Error retrieving profile");
+            return StatusCode(500, new { message = "An error occurred while retrieving your profile" });
         }
-
-        var profileDto = new UserProfileDto
-        {
-            Id = user.Id,
-            Username = user.Username,
-            Email = user.Email,
-            FirstName = user.FirstName,
-            LastName = user.LastName,
-            Role = user.Role,
-            DateOfBirth = user.DateOfBirth,
-            Phone = user.Phone,
-            Address = user.Address,
-            City = user.City,
-            State = user.State,
-            ZipCode = user.ZipCode,
-            Country = user.Country,
-            DietaryRestrictions = user.DietaryRestrictions,
-            CreatedAt = user.CreatedAt,
-            IsActive = user.IsActive
-        };
-
-        return Ok(profileDto);
     }
 
     [HttpPut]
@@ -141,32 +151,47 @@ public class ProfileController : ControllerBase
     [Authorize]
     public async Task<IActionResult> GetSubscription()
     {
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+        try
         {
-            return Unauthorized();
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+            {
+                _logger.LogWarning("GetSubscription called with invalid user ID in claims: {Claim}", userIdClaim);
+                return Unauthorized();
+            }
+
+            _logger.LogInformation("Retrieving subscription for UserId: {UserId}", userId);
+
+            var subscription = await _context.MembershipSubscriptions
+                .Where(s => s.UserId == userId && s.Status == "active")
+                .OrderByDescending(s => s.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            if (subscription == null)
+            {
+                _logger.LogInformation("No active subscription found for UserId: {UserId}", userId);
+                return NotFound(new { message = "No active subscription found" });
+            }
+
+            _logger.LogInformation("Retrieved subscription for UserId: {UserId}, Tier: {Tier}, Status: {Status}",
+                userId, subscription.MembershipTier, subscription.Status);
+
+            return Ok(new
+            {
+                id = subscription.StripeSubscriptionId,
+                status = subscription.Status,
+                membershipTier = subscription.MembershipTier,
+                amount = subscription.Amount,
+                startDate = subscription.StartDate,
+                endDate = subscription.EndDate,
+                nextBillingDate = subscription.NextBillingDate,
+                createdAt = subscription.CreatedAt
+            });
         }
-
-        var subscription = await _context.MembershipSubscriptions
-            .Where(s => s.UserId == userId && s.Status == "active")
-            .OrderByDescending(s => s.CreatedAt)
-            .FirstOrDefaultAsync();
-
-        if (subscription == null)
+        catch (Exception ex)
         {
-            return NotFound(new { message = "No active subscription found" });
+            _logger.LogError(ex, "Error retrieving subscription");
+            return StatusCode(500, new { message = "An error occurred while retrieving your subscription" });
         }
-
-        return Ok(new
-        {
-            id = subscription.StripeSubscriptionId,
-            status = subscription.Status,
-            membershipTier = subscription.MembershipTier,
-            amount = subscription.Amount,
-            startDate = subscription.StartDate,
-            endDate = subscription.EndDate,
-            nextBillingDate = subscription.NextBillingDate,
-            createdAt = subscription.CreatedAt
-        });
     }
 }

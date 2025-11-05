@@ -44,15 +44,20 @@ public class AuthController : ControllerBase
     {
         try
         {
+            _logger.LogInformation("Registration attempt - Email: {Email}, Username: {Username}",
+                request.Email, request.Username);
+
             // Check if username already exists
             if (await _context.Users.AnyAsync(u => u.Username == request.Username))
             {
+                _logger.LogWarning("Registration failed - Username already exists: {Username}", request.Username);
                 return BadRequest(new { message = "Username already exists" });
             }
 
             // Check if email already exists
             if (await _context.Users.AnyAsync(u => u.Email == request.Email))
             {
+                _logger.LogWarning("Registration failed - Email already exists: {Email}", request.Email);
                 return BadRequest(new { message = "Email already exists" });
             }
 
@@ -105,17 +110,20 @@ public class AuthController : ControllerBase
                     { "Username", user.Username }
                 });
 
+            _logger.LogInformation("Registration successful - UserId: {UserId}, Email: {Email}, Username: {Username}",
+                user.Id, user.Email, user.Username);
+
             // Send welcome email asynchronously
             _ = Task.Run(async () =>
             {
                 try
                 {
                     await _emailService.SendWelcomeEmailAsync(user.Email, user.FirstName, user.LastName);
-                    _logger.LogInformation($"Welcome email sent to {user.Email}");
                 }
                 catch (Exception emailEx)
                 {
-                    _logger.LogError(emailEx, $"Failed to send welcome email to {user.Email}");
+                    _logger.LogError(emailEx, "Failed to send welcome email after registration. UserId: {UserId}, Email: {Email}",
+                        user.Id, user.Email);
                 }
             });
 
@@ -132,7 +140,8 @@ public class AuthController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during registration");
+            _logger.LogError(ex, "Error during registration. Email: {Email}, Username: {Username}",
+                request.Email, request.Username);
             return StatusCode(500, new { message = "An error occurred during registration" });
         }
     }
@@ -142,10 +151,18 @@ public class AuthController : ControllerBase
     {
         try
         {
+            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
+            var userAgent = Request.Headers["User-Agent"].ToString();
+
             // Allow login by username or email
             var loginId = (request.Username ?? string.Empty).Trim();
+            var isEmailLogin = loginId.Contains('@');
+
+            _logger.LogInformation("Login attempt - LoginId: {LoginId}, Type: {LoginType}, IP: {IpAddress}",
+                loginId, isEmailLogin ? "Email" : "Username", ipAddress);
+
             User? user = null;
-            if (loginId.Contains('@'))
+            if (isEmailLogin)
             {
                 var loginLower = loginId.ToLower();
                 user = await _context.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == loginLower);
@@ -154,23 +171,33 @@ public class AuthController : ControllerBase
             {
                 user = await _context.Users.FirstOrDefaultAsync(u => u.Username == loginId);
             }
-            
+
             if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
             {
                 // Log failed login attempt if user exists
                 if (user != null)
                 {
+                    _logger.LogWarning("Login failed - Invalid password. UserId: {UserId}, Email: {Email}, IP: {IpAddress}",
+                        user.Id, user.Email, ipAddress);
+
                     await _activityLogService.LogLoginAsync(
-                        user.Id, 
-                        HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown",
-                        Request.Headers["User-Agent"].ToString(),
+                        user.Id,
+                        ipAddress,
+                        userAgent,
                         success: false);
+                }
+                else
+                {
+                    _logger.LogWarning("Login failed - User not found. LoginId: {LoginId}, IP: {IpAddress}",
+                        loginId, ipAddress);
                 }
                 return Unauthorized(new { message = "Invalid username or password" });
             }
 
             if (!user.IsActive)
             {
+                _logger.LogWarning("Login failed - Account disabled. UserId: {UserId}, Email: {Email}, IP: {IpAddress}",
+                    user.Id, user.Email, ipAddress);
                 return Unauthorized(new { message = "Account is disabled" });
             }
 
@@ -197,6 +224,9 @@ public class AuthController : ControllerBase
                 session.UserAgent ?? "Unknown",
                 success: true);
 
+            _logger.LogInformation("Login successful - UserId: {UserId}, Email: {Email}, Username: {Username}, IP: {IpAddress}",
+                user.Id, user.Email, user.Username, ipAddress);
+
             return Ok(new LoginResponse
             {
                 Token = token,
@@ -210,7 +240,9 @@ public class AuthController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during login");
+            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
+            _logger.LogError(ex, "Error during login. LoginId: {LoginId}, IP: {IpAddress}",
+                request.Username, ipAddress);
             return StatusCode(500, new { message = "An error occurred during login" });
         }
     }
@@ -279,8 +311,13 @@ public class AuthController : ControllerBase
     {
         try
         {
+            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
+
+            _logger.LogInformation("Password reset attempt - IP: {IpAddress}", ipAddress);
+
             if (string.IsNullOrWhiteSpace(request.Token) || string.IsNullOrWhiteSpace(request.NewPassword))
             {
+                _logger.LogWarning("Password reset failed - Invalid request format. IP: {IpAddress}", ipAddress);
                 return BadRequest(new { message = "Invalid request" });
             }
 
@@ -290,6 +327,7 @@ public class AuthController : ControllerBase
 
             if (token == null || token.UsedAt != null || token.ExpiresAt < DateTime.UtcNow || token.User == null)
             {
+                _logger.LogWarning("Password reset failed - Invalid or expired token. IP: {IpAddress}", ipAddress);
                 return BadRequest(new { message = "Invalid or expired token" });
             }
 
@@ -311,11 +349,15 @@ public class AuthController : ControllerBase
                 ActivityCategories.Authentication,
                 "Password reset completed");
 
+            _logger.LogInformation("Password reset successful - UserId: {UserId}, Email: {Email}",
+                token.UserId, token.User.Email);
+
             return Ok(new { message = "Password has been reset" });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during reset-password");
+            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
+            _logger.LogError(ex, "Error during password reset. IP: {IpAddress}", ipAddress);
             return StatusCode(500, new { message = "An error occurred during password reset" });
         }
     }
@@ -326,6 +368,11 @@ public class AuthController : ControllerBase
     {
         try
         {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
+
+            _logger.LogInformation("Logout initiated - UserId: {UserId}, IP: {IpAddress}", userId, ipAddress);
+
             var token = Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
             var session = await _context.Sessions.FirstOrDefaultAsync(s => s.Token == token);
 
@@ -333,13 +380,20 @@ public class AuthController : ControllerBase
             {
                 _context.Sessions.Remove(session);
                 await _context.SaveChangesAsync();
+                _logger.LogInformation("Logout successful - UserId: {UserId}, SessionId: {SessionId}",
+                    session.UserId, session.Id);
+            }
+            else
+            {
+                _logger.LogWarning("Logout called but session not found - UserId: {UserId}", userId);
             }
 
             return Ok(new { message = "Logged out successfully" });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during logout");
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            _logger.LogError(ex, "Error during logout - UserId: {UserId}", userId);
             return StatusCode(500, new { message = "An error occurred during logout" });
         }
     }

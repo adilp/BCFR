@@ -212,13 +212,19 @@ namespace MemberOrgApi.Services
                     TextBody = textBody
                 };
 
+                _logger.LogInformation("Sending welcome email to {Email}, Name: {FirstName} {LastName}",
+                    toEmail, firstName, lastName);
+
                 var response = await _resend.EmailSendAsync(message);
-                _logger.LogInformation("Welcome email sent successfully to " + toEmail);
+
+                _logger.LogInformation("Welcome email sent successfully to {Email}",
+                    toEmail);
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to send welcome email to " + toEmail);
+                _logger.LogError(ex, "Failed to send welcome email to {Email}, Name: {FirstName} {LastName}",
+                    toEmail, firstName, lastName);
                 return false;
             }
         }
@@ -227,6 +233,8 @@ namespace MemberOrgApi.Services
         {
             try
             {
+                _logger.LogInformation("Sending password reset email to {Email}", toEmail);
+
                 var resetUrl = _configuration["App:BaseUrl"] + "/reset-password?token=" + resetToken;
                 
                 var htmlBody = @"
@@ -699,13 +707,19 @@ namespace MemberOrgApi.Services
                     message.Attachments = resendAttachments;
                 }
 
-                await _resend.EmailSendAsync(message);
-                _logger.LogInformation("Custom email sent to " + toEmail + " with subject: " + subject);
+                _logger.LogInformation("Sending custom email to {Email}, Subject: {Subject}, HasAttachments: {HasAttachments}",
+                    toEmail, subject, attachments?.Count > 0);
+
+                var response = await _resend.EmailSendAsync(message);
+
+                _logger.LogInformation("Custom email sent successfully to {Email}, Subject: {Subject}",
+                    toEmail, subject);
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to send custom email to " + toEmail);
+                _logger.LogError(ex, "Failed to send custom email. To: {Email}, Subject: {Subject}",
+                    toEmail, subject);
                 return false;
             }
         }

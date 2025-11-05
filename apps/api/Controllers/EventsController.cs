@@ -50,61 +50,90 @@ public class EventsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<EventDto>>> GetEvents([FromQuery] string? status = null)
     {
-        var query = _context.Events.AsQueryable();
-        
-        // If not authenticated or not admin, only show published events
-        if (!User.Identity?.IsAuthenticated ?? true)
+        try
         {
-            query = query.Where(e => e.Status == "published");
-        }
-        else if (!User.IsInRole("Admin") && status == null)
-        {
-            query = query.Where(e => e.Status == "published");
-        }
-        else if (!string.IsNullOrEmpty(status))
-        {
-            query = query.Where(e => e.Status == status);
-        }
+            var isAuthenticated = User.Identity?.IsAuthenticated ?? false;
+            var isAdmin = isAuthenticated && User.IsInRole("Admin");
 
-        var events = await query
-            .OrderBy(e => e.EventDate)
-            .ThenBy(e => e.StartTime)
-            .ToListAsync();
+            _logger.LogInformation("GetEvents called - IsAuthenticated: {IsAuth}, IsAdmin: {IsAdmin}, StatusFilter: {Status}",
+                isAuthenticated, isAdmin, status ?? "none");
 
-        var eventDtos = new List<EventDto>();
-        foreach (var evt in events)
-        {
-            var dto = MapToEventDto(evt);
-            dto.RsvpStats = await GetRsvpStats(evt.Id);
-            eventDtos.Add(dto);
+            var query = _context.Events.AsQueryable();
+
+            // If not authenticated or not admin, only show published events
+            if (!isAuthenticated)
+            {
+                query = query.Where(e => e.Status == "published");
+            }
+            else if (!isAdmin && status == null)
+            {
+                query = query.Where(e => e.Status == "published");
+            }
+            else if (!string.IsNullOrEmpty(status))
+            {
+                query = query.Where(e => e.Status == status);
+            }
+
+            var events = await query
+                .OrderBy(e => e.EventDate)
+                .ThenBy(e => e.StartTime)
+                .ToListAsync();
+
+            var eventDtos = new List<EventDto>();
+            foreach (var evt in events)
+            {
+                var dto = MapToEventDto(evt);
+                dto.RsvpStats = await GetRsvpStats(evt.Id);
+                eventDtos.Add(dto);
+            }
+
+            _logger.LogInformation("GetEvents returned {Count} events", eventDtos.Count);
+            return Ok(eventDtos);
         }
-
-        return Ok(eventDtos);
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving events list with status filter: {Status}", status ?? "none");
+            return StatusCode(500, new { message = "An error occurred while retrieving events" });
+        }
     }
 
     // GET: /events/{id} - Get single event
     [HttpGet("{id}")]
     public async Task<ActionResult<EventDto>> GetEvent(Guid id)
     {
-        var evt = await _context.Events
-            .Include(e => e.CreatedBy)
-            .FirstOrDefaultAsync(e => e.Id == id);
-
-        if (evt == null)
+        try
         {
-            return NotFound(new { message = "Event not found" });
-        }
+            _logger.LogInformation("GetEvent called for EventId: {EventId}", id);
 
-        // Check if user can view draft/cancelled events
-        if (evt.Status != "published" && (!User.Identity?.IsAuthenticated ?? true))
+            var evt = await _context.Events
+                .Include(e => e.CreatedBy)
+                .FirstOrDefaultAsync(e => e.Id == id);
+
+            if (evt == null)
+            {
+                _logger.LogWarning("Event not found: {EventId}", id);
+                return NotFound(new { message = "Event not found" });
+            }
+
+            // Check if user can view draft/cancelled events
+            if (evt.Status != "published" && (!User.Identity?.IsAuthenticated ?? true))
+            {
+                _logger.LogWarning("Unauthenticated user attempted to view non-published event: {EventId}, Status: {Status}",
+                    id, evt.Status);
+                return NotFound(new { message = "Event not found" });
+            }
+
+            var dto = MapToEventDto(evt);
+            dto.RsvpStats = await GetRsvpStats(evt.Id);
+
+            _logger.LogInformation("Successfully retrieved event: {EventId} - {Title}", id, evt.Title);
+            return Ok(dto);
+        }
+        catch (Exception ex)
         {
-            return NotFound(new { message = "Event not found" });
+            _logger.LogError(ex, "Error retrieving event: {EventId}", id);
+            return StatusCode(500, new { message = "An error occurred while retrieving the event" });
         }
-
-        var dto = MapToEventDto(evt);
-        dto.RsvpStats = await GetRsvpStats(evt.Id);
-
-        return Ok(dto);
     }
 
     // GET: /events/{id}/calendar.ics - Download ICS for event
@@ -197,27 +226,37 @@ public class EventsController : ControllerBase
     [Authorize(Policy = "AdminOnly")]
     public async Task<ActionResult<EventDto>> CreateEvent(CreateEventDto createDto)
     {
-        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userId))
+        try
         {
-            return Unauthorized();
-        }
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+            {
+                _logger.LogWarning("CreateEvent called with no user ID in claims");
+                return Unauthorized();
+            }
 
-        // Parse time strings to TimeSpan
-        if (!TryParseTime(createDto.EventTime, out var startTime))
-        {
-            return BadRequest(new { message = "Invalid start time format. Use HH:mm" });
-        }
-        if (!TryParseTime(createDto.EndTime, out var endTime))
-        {
-            return BadRequest(new { message = "Invalid end time format. Use HH:mm" });
-        }
+            _logger.LogInformation("CreateEvent started by UserId: {UserId}, Title: {Title}, Status: {Status}",
+                userId, createDto.Title, createDto.Status);
 
-        // Validate RSVP deadline is before event date
-        if (createDto.RsvpDeadline >= createDto.EventDate)
-        {
-            return BadRequest(new { message = "RSVP deadline must be before event date" });
-        }
+            // Parse time strings to TimeSpan
+            if (!TryParseTime(createDto.EventTime, out var startTime))
+            {
+                _logger.LogWarning("Invalid start time format provided: {Time}", createDto.EventTime);
+                return BadRequest(new { message = "Invalid start time format. Use HH:mm" });
+            }
+            if (!TryParseTime(createDto.EndTime, out var endTime))
+            {
+                _logger.LogWarning("Invalid end time format provided: {Time}", createDto.EndTime);
+                return BadRequest(new { message = "Invalid end time format. Use HH:mm" });
+            }
+
+            // Validate RSVP deadline is before event date
+            if (createDto.RsvpDeadline >= createDto.EventDate)
+            {
+                _logger.LogWarning("Invalid RSVP deadline: {Deadline} is not before event date: {EventDate}",
+                    createDto.RsvpDeadline, createDto.EventDate);
+                return BadRequest(new { message = "RSVP deadline must be before event date" });
+            }
 
         // Convert Central Time dates to UTC (always use Central Time for Birmingham events)
         var centralTimeZone = TimeZoneInfo.FindSystemTimeZoneById("America/Chicago");
@@ -253,16 +292,25 @@ public class EventsController : ControllerBase
         var dto = MapToEventDto(evt);
         dto.RsvpStats = new RsvpStatsDto { Yes = 0, No = 0, Pending = 0, PlusOnes = 0 };
 
-        _logger.LogInformation("Event created: {EventId} by {UserId}", evt.Id, userId);
+            _logger.LogInformation("Event created successfully: {EventId} by {UserId}, Title: {Title}, Status: {Status}",
+                evt.Id, userId, evt.Title, evt.Status);
 
-        // Queue announcement campaign if event is published
-        if (evt.Status == "published")
-        {
-            await QueueEventAnnouncementCampaign(evt);
-            await ScheduleEventReminderJobs(evt);
+            // Queue announcement campaign if event is published
+            if (evt.Status == "published")
+            {
+                _logger.LogInformation("Event {EventId} is published, queueing announcement campaign", evt.Id);
+                await QueueEventAnnouncementCampaign(evt);
+                await ScheduleEventReminderJobs(evt);
+            }
+
+            return CreatedAtAction(nameof(GetEvent), new { id = evt.Id }, dto);
         }
-
-        return CreatedAtAction(nameof(GetEvent), new { id = evt.Id }, dto);
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating event. Title: {Title}, CreatedBy: {UserId}",
+                createDto.Title, User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+            return StatusCode(500, new { message = "An error occurred while creating the event" });
+        }
     }
 
     // PUT: /events/{id} - Update event (Admin only)
@@ -270,11 +318,18 @@ public class EventsController : ControllerBase
     [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> UpdateEvent(Guid id, UpdateEventDto updateDto)
     {
-        var evt = await _context.Events.FindAsync(id);
-        if (evt == null)
+        try
         {
-            return NotFound(new { message = "Event not found" });
-        }
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            _logger.LogInformation("UpdateEvent started for EventId: {EventId} by UserId: {UserId}",
+                id, userId);
+
+            var evt = await _context.Events.FindAsync(id);
+            if (evt == null)
+            {
+                _logger.LogWarning("Update failed - Event not found: {EventId}", id);
+                return NotFound(new { message = "Event not found" });
+            }
 
         // Parse time strings to TimeSpan
         if (!TryParseTime(updateDto.EventTime, out var startTime))
@@ -318,18 +373,26 @@ public class EventsController : ControllerBase
         evt.Status = updateDto.Status;
         evt.UpdatedAt = DateTime.UtcNow;
 
-        await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync();
 
-        _logger.LogInformation("Event updated: {EventId}", evt.Id);
+            _logger.LogInformation("Event updated successfully: {EventId}, StatusChange: {OldStatus} -> {NewStatus}",
+                evt.Id, previousStatus, evt.Status);
 
-        // Queue announcement campaign if event is being published for the first time
-        if (previousStatus != "published" && updateDto.Status == "published")
-        {
-            await QueueEventAnnouncementCampaign(evt);
-            await ScheduleEventReminderJobs(evt);
+            // Queue announcement campaign if event is being published for the first time
+            if (previousStatus != "published" && updateDto.Status == "published")
+            {
+                _logger.LogInformation("Event {EventId} newly published, queueing announcement campaign", evt.Id);
+                await QueueEventAnnouncementCampaign(evt);
+                await ScheduleEventReminderJobs(evt);
+            }
+
+            return NoContent();
         }
-
-        return NoContent();
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating event: {EventId}", id);
+            return StatusCode(500, new { message = "An error occurred while updating the event" });
+        }
     }
 
     // DELETE: /events/{id} - Delete event (Admin only)
@@ -337,18 +400,33 @@ public class EventsController : ControllerBase
     [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> DeleteEvent(Guid id)
     {
-        var evt = await _context.Events.FindAsync(id);
-        if (evt == null)
+        try
         {
-            return NotFound(new { message = "Event not found" });
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            _logger.LogInformation("DeleteEvent called for EventId: {EventId} by UserId: {UserId}",
+                id, userId);
+
+            var evt = await _context.Events.FindAsync(id);
+            if (evt == null)
+            {
+                _logger.LogWarning("Delete failed - Event not found: {EventId}", id);
+                return NotFound(new { message = "Event not found" });
+            }
+
+            var eventTitle = evt.Title;
+            _context.Events.Remove(evt);
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Event deleted successfully: {EventId}, Title: {Title}, DeletedBy: {UserId}",
+                id, eventTitle, userId);
+
+            return NoContent();
         }
-
-        _context.Events.Remove(evt);
-        await _context.SaveChangesAsync();
-
-        _logger.LogInformation("Event deleted: {EventId}", evt.Id);
-
-        return NoContent();
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting event: {EventId}", id);
+            return StatusCode(500, new { message = "An error occurred while deleting the event" });
+        }
     }
 
     // GET: /events/{id}/rsvps - Get RSVPs for an event (Admin only)
@@ -356,26 +434,37 @@ public class EventsController : ControllerBase
     [Authorize(Policy = "AdminOnly")]
     public async Task<ActionResult<IEnumerable<EventRsvpDto>>> GetEventRsvps(Guid id)
     {
-        var rsvps = await _context.EventRsvps
-            .Include(r => r.User)
-            .Where(r => r.EventId == id)
-            .OrderBy(r => r.ResponseDate)
-            .ToListAsync();
-
-        var rsvpDtos = rsvps.Select(r => new EventRsvpDto
+        try
         {
-            Id = r.Id,
-            UserId = r.UserId,
-            UserName = $"{r.User.FirstName} {r.User.LastName}",
-            UserEmail = r.User.Email,
-            Response = r.Response,
-            HasPlusOne = r.HasPlusOne,
-            ResponseDate = r.ResponseDate,
-            CheckedIn = r.CheckedIn,
-            CheckInTime = r.CheckInTime
-        });
+            _logger.LogInformation("GetEventRsvps called for EventId: {EventId}", id);
 
-        return Ok(rsvpDtos);
+            var rsvps = await _context.EventRsvps
+                .Include(r => r.User)
+                .Where(r => r.EventId == id)
+                .OrderBy(r => r.ResponseDate)
+                .ToListAsync();
+
+            var rsvpDtos = rsvps.Select(r => new EventRsvpDto
+            {
+                Id = r.Id,
+                UserId = r.UserId,
+                UserName = $"{r.User.FirstName} {r.User.LastName}",
+                UserEmail = r.User.Email,
+                Response = r.Response,
+                HasPlusOne = r.HasPlusOne,
+                ResponseDate = r.ResponseDate,
+                CheckedIn = r.CheckedIn,
+                CheckInTime = r.CheckInTime
+            });
+
+            _logger.LogInformation("Retrieved {Count} RSVPs for event: {EventId}", rsvps.Count, id);
+            return Ok(rsvpDtos);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving RSVPs for event: {EventId}", id);
+            return StatusCode(500, new { message = "An error occurred while retrieving RSVPs" });
+        }
     }
 
     // GET: /events/{id}/my-rsvp - Get current user's RSVP for an event
@@ -383,35 +472,49 @@ public class EventsController : ControllerBase
     [Authorize]
     public async Task<ActionResult<EventRsvpDto>> GetMyRsvp(Guid id)
     {
-        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userId))
+        try
         {
-            return Unauthorized();
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+            {
+                _logger.LogWarning("GetMyRsvp called with no user ID in claims");
+                return Unauthorized();
+            }
+
+            _logger.LogInformation("GetMyRsvp called for EventId: {EventId}, UserId: {UserId}", id, userId);
+
+            var rsvp = await _context.EventRsvps
+                .Include(r => r.User)
+                .FirstOrDefaultAsync(r => r.EventId == id && r.UserId == Guid.Parse(userId));
+
+            if (rsvp == null)
+            {
+                _logger.LogInformation("No RSVP found for EventId: {EventId}, UserId: {UserId}", id, userId);
+                return NotFound(new { message = "RSVP not found" });
+            }
+
+            var dto = new EventRsvpDto
+            {
+                Id = rsvp.Id,
+                UserId = rsvp.UserId,
+                UserName = $"{rsvp.User.FirstName} {rsvp.User.LastName}",
+                UserEmail = rsvp.User.Email,
+                Response = rsvp.Response,
+                HasPlusOne = rsvp.HasPlusOne,
+                ResponseDate = rsvp.ResponseDate,
+                CheckedIn = rsvp.CheckedIn,
+                CheckInTime = rsvp.CheckInTime
+            };
+
+            _logger.LogInformation("Retrieved RSVP for EventId: {EventId}, UserId: {UserId}, Response: {Response}",
+                id, userId, rsvp.Response);
+            return Ok(dto);
         }
-
-        var rsvp = await _context.EventRsvps
-            .Include(r => r.User)
-            .FirstOrDefaultAsync(r => r.EventId == id && r.UserId == Guid.Parse(userId));
-
-        if (rsvp == null)
+        catch (Exception ex)
         {
-            return NotFound(new { message = "RSVP not found" });
+            _logger.LogError(ex, "Error retrieving user RSVP for EventId: {EventId}", id);
+            return StatusCode(500, new { message = "An error occurred while retrieving your RSVP" });
         }
-
-        var dto = new EventRsvpDto
-        {
-            Id = rsvp.Id,
-            UserId = rsvp.UserId,
-            UserName = $"{rsvp.User.FirstName} {rsvp.User.LastName}",
-            UserEmail = rsvp.User.Email,
-            Response = rsvp.Response,
-            HasPlusOne = rsvp.HasPlusOne,
-            ResponseDate = rsvp.ResponseDate,
-            CheckedIn = rsvp.CheckedIn,
-            CheckInTime = rsvp.CheckInTime
-        };
-
-        return Ok(dto);
     }
 
     // POST: /events/{id}/rsvp - Create or update RSVP for current user
@@ -604,43 +707,61 @@ public class EventsController : ControllerBase
     [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> CheckInAttendee(Guid id, Guid userId)
     {
-        var rsvp = await _context.EventRsvps
-            .FirstOrDefaultAsync(r => r.EventId == id && r.UserId == userId);
-
-        if (rsvp == null)
+        try
         {
-            return NotFound(new { message = "RSVP not found" });
-        }
+            var adminId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            _logger.LogInformation("CheckInAttendee called for EventId: {EventId}, UserId: {UserId}, AdminId: {AdminId}",
+                id, userId, adminId);
 
-        if (rsvp.Response != "yes")
-        {
-            return BadRequest(new { message = "Can only check in attendees who RSVP'd yes" });
-        }
+            var rsvp = await _context.EventRsvps
+                .FirstOrDefaultAsync(r => r.EventId == id && r.UserId == userId);
 
-        rsvp.CheckedIn = true;
-        rsvp.CheckInTime = DateTime.UtcNow;
-        await _context.SaveChangesAsync();
-
-        // Get event details for logging
-        var evt = await _context.Events.FindAsync(id);
-        
-        // Log the check-in activity
-        await _activityLogService.LogActivityAsync(
-            userId,
-            ActivityTypes.EventAttendance,
-            ActivityCategories.Engagement,
-            $"Checked in to event: {evt?.Title}",
-            metadata: new Dictionary<string, object>
+            if (rsvp == null)
             {
-                { "EventId", id },
-                { "EventTitle", evt?.Title ?? "Unknown" },
-                { "CheckInTime", DateTime.UtcNow }
+                _logger.LogWarning("Check-in failed - RSVP not found for EventId: {EventId}, UserId: {UserId}",
+                    id, userId);
+                return NotFound(new { message = "RSVP not found" });
             }
-        );
 
-        _logger.LogInformation("Attendee checked in: EventId={EventId}, UserId={UserId}", id, userId);
+            if (rsvp.Response != "yes")
+            {
+                _logger.LogWarning("Check-in failed - User {UserId} RSVP'd '{Response}' (not 'yes') for EventId: {EventId}",
+                    userId, rsvp.Response, id);
+                return BadRequest(new { message = "Can only check in attendees who RSVP'd yes" });
+            }
 
-        return NoContent();
+            rsvp.CheckedIn = true;
+            rsvp.CheckInTime = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
+            // Get event details for logging
+            var evt = await _context.Events.FindAsync(id);
+
+            // Log the check-in activity
+            await _activityLogService.LogActivityAsync(
+                userId,
+                ActivityTypes.EventAttendance,
+                ActivityCategories.Engagement,
+                $"Checked in to event: {evt?.Title}",
+                metadata: new Dictionary<string, object>
+                {
+                    { "EventId", id },
+                    { "EventTitle", evt?.Title ?? "Unknown" },
+                    { "CheckInTime", DateTime.UtcNow }
+                }
+            );
+
+            _logger.LogInformation("Attendee checked in successfully: EventId={EventId}, UserId={UserId}, AdminId={AdminId}",
+                id, userId, adminId);
+
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking in attendee for EventId: {EventId}, UserId: {UserId}",
+                id, userId);
+            return StatusCode(500, new { message = "An error occurred during check-in" });
+        }
     }
 
     // Helper methods
