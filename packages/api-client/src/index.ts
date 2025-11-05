@@ -292,8 +292,18 @@ export class ApiClient {
     });
   }
 
-  async getAdminStats(): Promise<AdminStats> {
-    return this.request<AdminStats>('/admin/stats');
+  async getAdminStats(params?: {
+    startDate?: string;
+    endDate?: string;
+    period?: string; // "month", "quarter", "year", "all"
+  }): Promise<AdminStats> {
+    const queryParams = new URLSearchParams();
+    if (params?.startDate) queryParams.append('startDate', params.startDate);
+    if (params?.endDate) queryParams.append('endDate', params.endDate);
+    if (params?.period) queryParams.append('period', params.period);
+
+    const query = queryParams.toString();
+    return this.request<AdminStats>(`/admin/stats${query ? `?${query}` : ''}`);
   }
 
   // Activity log endpoints

@@ -190,13 +190,43 @@ export interface Subscription {
 
 // Admin Types
 export interface AdminStats {
+  // Basic Counts
   totalUsers: number;
   activeUsers: number;
-  newUsersThisMonth: number;
-  totalRevenue: number;
+  newUsersThisPeriod: number;
+  churnedUsersThisPeriod: number;
+
+  // Financial
+  monthlyRecurringRevenue: number;
+  annualRecurringRevenue: number;
   activeSubscriptions: number;
-  upcomingEvents: number;
-  recentActivities?: Activity[];
+  revenueByTier: {
+    Individual: number;
+    Family: number;
+    Student: number;
+  };
+  revenueGrowthRate: number; // Percentage
+  cancelledSubscriptions: number;
+
+  // Events
+  totalEventsHeld: number;
+  averageRsvpResponseRate: number; // Percentage
+  averageAttendanceRate: number; // Percentage
+  averageAttendeesPerEvent: number;
+  attendanceTrend: number; // Percentage change
+
+  // Demographics & Engagement
+  ageDistribution: Record<string, number>;
+  averageEventsPerMember: number;
+  topEngagedMembers: Array<{
+    name: string;
+    eventsAttended: number;
+  }>;
+
+  // Metadata
+  periodStart: string;
+  periodEnd: string;
+  periodLabel: string;
 }
 
 export interface Activity {

@@ -30,11 +30,42 @@ public class RecordCheckPaymentRequest
 
 public class AdminStats
 {
+    // Basic Counts
     public int TotalUsers { get; set; }
     public int ActiveUsers { get; set; }
-    public int AdminCount { get; set; }
-    public int MemberCount { get; set; }
+    public int NewUsersThisPeriod { get; set; }
+    public int ChurnedUsersThisPeriod { get; set; }
+
+    // Financial
+    public decimal MonthlyRecurringRevenue { get; set; }
+    public decimal AnnualRecurringRevenue { get; set; }
     public int ActiveSubscriptions { get; set; }
+    public Dictionary<string, decimal> RevenueByTier { get; set; } = new();
+    public decimal RevenueGrowthRate { get; set; } // Percentage
+    public int CancelledSubscriptions { get; set; }
+
+    // Events
+    public int TotalEventsHeld { get; set; }
+    public decimal AverageRsvpResponseRate { get; set; } // Percentage
+    public decimal AverageAttendanceRate { get; set; } // Percentage
+    public decimal AverageAttendeesPerEvent { get; set; }
+    public decimal AttendanceTrend { get; set; } // Percentage change
+
+    // Demographics & Engagement
+    public Dictionary<string, int> AgeDistribution { get; set; } = new();
+    public decimal AverageEventsPerMember { get; set; }
+    public List<TopEngagedMemberDto> TopEngagedMembers { get; set; } = new();
+
+    // Metadata
+    public DateTime PeriodStart { get; set; }
+    public DateTime PeriodEnd { get; set; }
+    public string PeriodLabel { get; set; } = string.Empty;
+}
+
+public class TopEngagedMemberDto
+{
+    public string Name { get; set; } = string.Empty;
+    public int EventsAttended { get; set; }
 }
 
 public class AdminCreateUserRequest
