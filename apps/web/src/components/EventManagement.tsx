@@ -30,9 +30,11 @@ function EventManagement() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showNewEventDrawer, setShowNewEventDrawer] = useState(false);
+  const [totalActiveUsers, setTotalActiveUsers] = useState<number>(0);
 
   useEffect(() => {
     fetchEvents();
+    fetchTotalActiveUsers();
   }, []);
 
   const fetchEvents = async () => {
@@ -50,6 +52,16 @@ function EventManagement() {
     }
   };
 
+  const fetchTotalActiveUsers = async () => {
+    try {
+      const apiClient = getApiClient();
+      const stats = await apiClient.getAdminStats();
+      setTotalActiveUsers(stats.activeUsers);
+    } catch (err: any) {
+      console.error('Failed to fetch total active users:', err);
+      // Don't show error to user, just use 0 as fallback
+    }
+  };
 
   const fetchEventRsvps = async (eventId: string) => {
     try {
@@ -441,8 +453,9 @@ function EventManagement() {
                         <div className="stat-item">
                           <span className="stat-label">Response Rate:</span>
                           <span className="stat-value">
-                            {Math.round(((event.rsvpStats?.yes || 0) + (event.rsvpStats?.no || 0)) / 
-                              ((event.rsvpStats?.yes || 0) + (event.rsvpStats?.no || 0) + (event.rsvpStats?.pending || 0)) * 100)}%
+                            {totalActiveUsers > 0
+                              ? Math.round(((event.rsvpStats?.yes || 0) + (event.rsvpStats?.no || 0)) / totalActiveUsers * 100)
+                              : 0}%
                           </span>
                         </div>
                       </div>
