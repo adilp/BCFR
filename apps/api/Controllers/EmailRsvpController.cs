@@ -159,9 +159,8 @@ namespace MemberOrgApi.Controllers
                 await _activityLogService.LogActivityAsync(
                     rsvpToken.UserId,
                     activityType,
+                    ActivityCategories.Engagement,
                     description,
-                    Request.HttpContext.Connection.RemoteIpAddress?.ToString(),
-                    Request.Headers["User-Agent"].ToString(),
                     metadata: metadata
                 );
 
