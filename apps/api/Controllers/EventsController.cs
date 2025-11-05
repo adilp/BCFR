@@ -1182,6 +1182,15 @@ public class EventsController : ControllerBase
         var start = DateTime.Today.Add(evt.StartTime).ToString("h:mm tt");
         var end = DateTime.Today.Add(evt.EndTime).ToString("h:mm tt");
 
+        // Build the email note HTML separately
+        var emailNoteHtml = "";
+        if (!string.IsNullOrWhiteSpace(evt.EmailNote))
+        {
+            emailNoteHtml = $@"<div style='background:#f9fafb;border-left:4px solid #6B3AA0;padding:20px;margin:20px 0;border-radius:6px'>
+                    <div style='color:#374151;line-height:1.8;font-size:15px'>{FormatEmailNote(evt.EmailNote)}</div>
+                  </div>";
+        }
+
         return $@"<!DOCTYPE html>
         <html>
         <head><meta charset='utf-8' /><title>{evt.Title} - Reminder</title></head>
@@ -1192,10 +1201,7 @@ public class EventsController : ControllerBase
             </div>
             <div style='padding:24px'>
               <p style='margin-top:0'>Hello {firstName},</p>
-              {(!string.IsNullOrWhiteSpace(evt.EmailNote) ?
-                $@"<div style='background:#f9fafb;border-left:4px solid #6B3AA0;padding:20px;margin:20px 0;border-radius:6px'>
-                    <div style='color:#374151;line-height:1.8;font-size:15px'>{FormatEmailNote(evt.EmailNote)}</div>
-                  </div>" : "")}
+              {emailNoteHtml}
               <p>Reminder for <strong>{evt.Title}</strong>.</p>
               <ul>
                 <li><strong>Date:</strong> {dateStr}</li>
@@ -1255,6 +1261,15 @@ public class EventsController : ControllerBase
         var start = DateTime.Today.Add(evt.StartTime).ToString("h:mm tt");
         var end = DateTime.Today.Add(evt.EndTime).ToString("h:mm tt");
 
+        // Build the email note HTML separately
+        var emailNoteHtml = "";
+        if (!string.IsNullOrWhiteSpace(evt.EmailNote))
+        {
+            emailNoteHtml = $@"<div style='background:#f9fafb;border-left:4px solid #6B3AA0;padding:20px;margin:20px 0;border-radius:6px'>
+                    <div style='color:#374151;line-height:1.8;font-size:15px'>{FormatEmailNote(evt.EmailNote)}</div>
+                  </div>";
+        }
+
         return $@"<!DOCTYPE html>
         <html>
         <head><meta charset='utf-8' /><title>{evt.Title} - RSVP Confirmation</title></head>
@@ -1266,10 +1281,7 @@ public class EventsController : ControllerBase
             <div style='padding:24px'>
               <p style='margin-top:0'>Hello {firstName},</p>
               <p>Thanks for RSVP'ing <strong>YES</strong> to <strong>{evt.Title}</strong>.</p>
-              {(!string.IsNullOrWhiteSpace(evt.EmailNote) ?
-                $@"<div style='background:#f9fafb;border-left:4px solid #6B3AA0;padding:20px;margin:20px 0;border-radius:6px'>
-                    <div style='color:#374151;line-height:1.8;font-size:15px'>{FormatEmailNote(evt.EmailNote)}</div>
-                  </div>" : "")}
+              {emailNoteHtml}
               <ul>
                 <li><strong>Date:</strong> {dateStr}</li>
                 <li><strong>Time:</strong> {start} – {end} CT</li>
