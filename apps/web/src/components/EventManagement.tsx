@@ -61,6 +61,29 @@ function EventManagement() {
     }
   };
 
+  const handleCheckInToggle = async (eventId: string, userId: string, currentCheckedIn: boolean) => {
+    try {
+      const apiClient = getApiClient();
+      const newCheckedInStatus = !currentCheckedIn;
+
+      // Call API to update check-in status
+      await apiClient.checkInAttendee(eventId, userId, newCheckedInStatus);
+
+      // Update local state
+      setEventRsvps(prev => ({
+        ...prev,
+        [eventId]: prev[eventId].map(rsvp =>
+          rsvp.userId === userId
+            ? { ...rsvp, checkedIn: newCheckedInStatus, checkInTime: newCheckedInStatus ? new Date().toISOString() : undefined }
+            : rsvp
+        )
+      }));
+    } catch (err: any) {
+      console.error(`Failed to update check-in for user ${userId}:`, err);
+      alert(err.message || 'Failed to update check-in status');
+    }
+  };
+
   const toggleRowExpansion = async (eventId: string) => {
     const newExpanded = new Set(expandedRows);
     if (newExpanded.has(eventId)) {
@@ -394,10 +417,12 @@ function EventManagement() {
                                 <td>{rsvp.hasPlusOne ? 'Yes' : 'No'}</td>
                                 <td>{formatEventDate(rsvp.responseDate)}</td>
                                 <td>
-                                  <input 
-                                    type="checkbox" 
+                                  <input
+                                    type="checkbox"
                                     checked={rsvp.checkedIn || false}
-                                    onChange={() => {/* Handle check-in */}}
+                                    onChange={() => handleCheckInToggle(event.id, rsvp.userId, rsvp.checkedIn || false)}
+                                    disabled={rsvp.response !== 'yes'}
+                                    title={rsvp.response !== 'yes' ? 'Only YES RSVPs can be checked in' : ''}
                                   />
                                 </td>
                               </tr>

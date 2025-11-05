@@ -702,16 +702,16 @@ public class EventsController : ControllerBase
         return Ok(dto);
     }
 
-    // POST: /events/{id}/checkin/{userId} - Check in attendee (Admin only)
+    // POST: /events/{id}/checkin/{userId} - Check in/out attendee (Admin only)
     [HttpPost("{id}/checkin/{userId}")]
     [Authorize(Policy = "AdminOnly")]
-    public async Task<IActionResult> CheckInAttendee(Guid id, Guid userId)
+    public async Task<IActionResult> CheckInAttendee(Guid id, Guid userId, [FromQuery] bool checkedIn = true)
     {
         try
         {
             var adminId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            _logger.LogInformation("CheckInAttendee called for EventId: {EventId}, UserId: {UserId}, AdminId: {AdminId}",
-                id, userId, adminId);
+            _logger.LogInformation("CheckInAttendee called for EventId: {EventId}, UserId: {UserId}, CheckedIn: {CheckedIn}, AdminId: {AdminId}",
+                id, userId, checkedIn, adminId);
 
             var rsvp = await _context.EventRsvps
                 .FirstOrDefaultAsync(r => r.EventId == id && r.UserId == userId);
@@ -730,35 +730,37 @@ public class EventsController : ControllerBase
                 return BadRequest(new { message = "Can only check in attendees who RSVP'd yes" });
             }
 
-            rsvp.CheckedIn = true;
-            rsvp.CheckInTime = DateTime.UtcNow;
+            rsvp.CheckedIn = checkedIn;
+            rsvp.CheckInTime = checkedIn ? DateTime.UtcNow : null;
             await _context.SaveChangesAsync();
 
             // Get event details for logging
             var evt = await _context.Events.FindAsync(id);
 
-            // Log the check-in activity
+            // Log the check-in/out activity
+            var action = checkedIn ? "Checked in" : "Checked out";
             await _activityLogService.LogActivityAsync(
                 userId,
-                ActivityTypes.EventAttendance,
+                checkedIn ? ActivityTypes.EventAttendance : ActivityTypes.EventCancellation,
                 ActivityCategories.Engagement,
-                $"Checked in to event: {evt?.Title}",
+                $"{action} from event: {evt?.Title}",
                 metadata: new Dictionary<string, object>
                 {
                     { "EventId", id },
                     { "EventTitle", evt?.Title ?? "Unknown" },
-                    { "CheckInTime", DateTime.UtcNow }
+                    { "CheckedIn", checkedIn },
+                    { "Timestamp", DateTime.UtcNow }
                 }
             );
 
-            _logger.LogInformation("Attendee checked in successfully: EventId={EventId}, UserId={UserId}, AdminId={AdminId}",
-                id, userId, adminId);
+            _logger.LogInformation("Attendee check-in status updated: EventId={EventId}, UserId={UserId}, CheckedIn={CheckedIn}, AdminId={AdminId}",
+                id, userId, checkedIn, adminId);
 
             return NoContent();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error checking in attendee for EventId: {EventId}, UserId: {UserId}",
+            _logger.LogError(ex, "Error updating check-in status for EventId: {EventId}, UserId: {UserId}",
                 id, userId);
             return StatusCode(500, new { message = "An error occurred during check-in" });
         }

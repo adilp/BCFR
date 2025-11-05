@@ -216,6 +216,12 @@ export class ApiClient {
     });
   }
 
+  async checkInAttendee(eventId: string, userId: string, checkedIn: boolean): Promise<void> {
+    return this.request<void>(`/events/${eventId}/checkin/${userId}?checkedIn=${checkedIn}`, {
+      method: 'POST',
+    });
+  }
+
   // Admin endpoints
   async getUsers(params?: UserQueryParams): Promise<{ users: AdminUser[]; totalCount: number }> {
     const queryParams = new URLSearchParams();
