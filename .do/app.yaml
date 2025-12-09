@@ -37,13 +37,13 @@ services:
 # React Web App
 static_sites:
   - name: web
-    source_dir: apps/web
+    source_dir: /
     github:
       repo: adilp/BCFR
       branch: main
       deploy_on_push: true
-    build_command: npm install && npm run build
-    output_dir: dist
+    build_command: npm install --legacy-peer-deps && npm run build -w @memberorg/web
+    output_dir: apps/web/dist
     catchall_document: index.html
     routes:
     - path: /
