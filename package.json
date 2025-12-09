@@ -12,10 +12,6 @@
     "web": "yarn workspace @memberorg/web dev",
     "api": "yarn workspace @memberorg/api dev"
   },
-  "dependencies": {
-    "react": "^19.2.1",
-    "react-dom": "^19.2.1"
-  },
   "devDependencies": {
     "lerna": "^8.0.0"
   }
