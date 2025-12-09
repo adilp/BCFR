@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { getApiClient } from '@memberorg/api-client';
-import { stripePromise } from '../lib/stripe';
 
 interface CheckoutFormProps {
   membershipTier: string;
@@ -49,19 +48,8 @@ const CheckoutForm = ({ membershipTier, onSuccess, onError }: CheckoutFormProps)
       if (data.checkoutUrl) {
         window.location.href = data.checkoutUrl;
       } else {
-        // Fallback to using Stripe.js if URL not provided
-        const stripe = await stripePromise;
-        if (!stripe) {
-          throw new Error('Stripe failed to load');
-        }
-
-        const { error } = await stripe.redirectToCheckout({
-          sessionId: data.sessionId
-        });
-
-        if (error) {
-          throw error;
-        }
+        // Fallback: construct checkout URL from session ID
+        throw new Error('Checkout URL not provided by server');
       }
 
       onSuccess?.();
