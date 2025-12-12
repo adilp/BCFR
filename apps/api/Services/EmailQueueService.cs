@@ -17,6 +17,25 @@ public class EmailQueueService : IEmailQueueService
 
     public async Task<Guid> QueueSingleEmailAsync(string to, string subject, string htmlBody, string? plainText = null, int priority = 1, Guid? campaignId = null, string? recipientName = null)
     {
+        var normalizedEmail = to.Trim().ToLowerInvariant();
+
+        // If this is part of a campaign, check if email already exists for this campaign+recipient
+        if (campaignId.HasValue)
+        {
+            var existing = await _db.EmailQueue
+                .FirstOrDefaultAsync(e =>
+                    e.CampaignId == campaignId.Value &&
+                    e.RecipientEmail.ToLower() == normalizedEmail);
+
+            if (existing != null)
+            {
+                _logger.LogInformation(
+                    "Email already queued for campaign {CampaignId} to {Recipient} with status {Status}. Skipping duplicate.",
+                    campaignId.Value, to, existing.Status);
+                return existing.Id;
+            }
+        }
+
         var item = new EmailQueueItem
         {
             Id = Guid.NewGuid(),
