@@ -168,18 +168,30 @@
 
 .rsvp-table th {
   background-color: var(--bg-gray);
-  padding: var(--space-sm) var(--space-md);
+  padding: var(--space-md) var(--space-md);
   text-align: left;
   font-weight: var(--font-medium);
-  font-size: 0.875rem;
+  font-size: 1rem;
   color: var(--text-secondary);
   border-bottom: 1px solid var(--border-medium);
 }
 
 .rsvp-table td {
-  padding: var(--space-sm) var(--space-md);
-  font-size: 0.875rem;
+  padding: var(--space-md) var(--space-md);
+  font-size: 1rem;
   border-bottom: 1px solid var(--border-light);
+}
+
+.checkin-checkbox {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  accent-color: #40C057;
+}
+
+.checkin-checkbox:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
 }
 
 .rsvp-response {

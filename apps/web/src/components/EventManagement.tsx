@@ -165,14 +165,14 @@ function EventManagement() {
 
     // Create CSV content
     const csvContent = [
-      ['Name', 'Email', 'Response', 'Plus One', 'Response Date', 'Checked In'],
+      ['Name', 'Checked In', 'Email', 'Response', 'Plus One', 'Response Date'],
       ...rsvps.map(r => [
         r.userName,
+        r.checkedIn ? 'Yes' : 'No',
         r.userEmail,
         r.response,
         r.hasPlusOne ? 'Yes' : 'No',
-        r.responseDate,
-        r.checkedIn ? 'Yes' : 'No'
+        r.responseDate
       ])
     ].map(row => row.join(',')).join('\n');
 
@@ -409,17 +409,27 @@ function EventManagement() {
                           <thead>
                             <tr>
                               <th>Name</th>
+                              <th>Checked In</th>
                               <th>Email</th>
                               <th>Response</th>
                               <th>Plus One</th>
                               <th>Response Date</th>
-                              <th>Checked In</th>
                             </tr>
                           </thead>
                           <tbody>
                             {(eventRsvps[event.id] || []).map((rsvp) => (
                               <tr key={rsvp.id}>
                                 <td>{rsvp.userName}</td>
+                                <td>
+                                  <input
+                                    type="checkbox"
+                                    className="checkin-checkbox"
+                                    checked={rsvp.checkedIn || false}
+                                    onChange={() => handleCheckInToggle(event.id, rsvp.userId, rsvp.checkedIn || false)}
+                                    disabled={rsvp.response !== 'yes'}
+                                    title={rsvp.response !== 'yes' ? 'Only YES RSVPs can be checked in' : ''}
+                                  />
+                                </td>
                                 <td>{rsvp.userEmail}</td>
                                 <td>
                                   <span className={`rsvp-response ${rsvp.response}`}>
@@ -428,15 +438,6 @@ function EventManagement() {
                                 </td>
                                 <td>{rsvp.hasPlusOne ? 'Yes' : 'No'}</td>
                                 <td>{formatEventDate(rsvp.responseDate)}</td>
-                                <td>
-                                  <input
-                                    type="checkbox"
-                                    checked={rsvp.checkedIn || false}
-                                    onChange={() => handleCheckInToggle(event.id, rsvp.userId, rsvp.checkedIn || false)}
-                                    disabled={rsvp.response !== 'yes'}
-                                    title={rsvp.response !== 'yes' ? 'Only YES RSVPs can be checked in' : ''}
-                                  />
-                                </td>
                               </tr>
                             ))}
                           </tbody>
