@@ -683,13 +683,21 @@ namespace MemberOrgApi.Services
         {
             try
             {
+                // Unsubscribe email - users can reply to unsubscribe
+                var unsubscribeEmail = _configuration["Resend:UnsubscribeEmail"] ?? "admin@birminghamforeignrelations.org";
+
                 var message = new EmailMessage
                 {
                     From = _fromName + " <" + _fromEmail + ">",
                     To = toEmail,
                     Subject = subject,
                     HtmlBody = htmlBody,
-                    TextBody = textBody
+                    TextBody = textBody,
+                    Headers = new Dictionary<string, string>
+                    {
+                        { "List-Unsubscribe", $"<mailto:{unsubscribeEmail}?subject=Unsubscribe>" },
+                        { "List-Unsubscribe-Post", "List-Unsubscribe=One-Click" }
+                    }
                 };
 
                 // Map optional attachments if provided
@@ -868,9 +876,11 @@ namespace MemberOrgApi.Services
                                 </div>
                                 <div class='footer'>
                                     <p><strong>Birmingham Committee on Foreign Relations</strong></p>
+                                    <p style='margin:4px 0;'>Birmingham, AL</p>
                                     <p>© 2025 BCFR. All rights reserved.</p>
                                     <p>You received this email as a member of BCFR.</p>
                                     <p><a href='" + _configuration["App:BaseUrl"] + @"'>Visit Our Website</a></p>
+                                    <p style='margin-top:12px;font-size:12px;color:#9CA3AF;'>To unsubscribe, reply to this email with &quot;Unsubscribe&quot; in the subject line.</p>
                                 </div>
                             </div>
                         </div>
@@ -878,10 +888,12 @@ namespace MemberOrgApi.Services
                     </html>";
 
                 var textBody = System.Text.RegularExpressions.Regex.Replace(bodyContent, "<.*?>", string.Empty);
-                textBody = "Birmingham Committee on Foreign Relations\n\n" + textBody + "\n\n© 2025 BCFR. All rights reserved.";
+                textBody = "Birmingham Committee on Foreign Relations\n\n" + textBody + "\n\n© 2025 BCFR. All rights reserved.\n\nTo unsubscribe, reply to this email with \"Unsubscribe\" in the subject line.";
 
                 // Send individual emails to each recipient to maintain privacy
                 // Add delay to respect Resend's rate limit (2 requests per second)
+                var unsubscribeEmail = _configuration["Resend:UnsubscribeEmail"] ?? "admin@birminghamforeignrelations.org";
+
                 foreach (var toEmail in toEmails)
                 {
                     var message = new EmailMessage
@@ -890,7 +902,11 @@ namespace MemberOrgApi.Services
                         To = toEmail,
                         Subject = subject,
                         HtmlBody = isHtml ? wrappedHtmlBody : null,
-                        TextBody = !isHtml ? bodyContent : textBody
+                        TextBody = !isHtml ? bodyContent : textBody,
+                        Headers = new Dictionary<string, string>
+                        {
+                            { "List-Unsubscribe", $"<mailto:{unsubscribeEmail}?subject=Unsubscribe>" }
+                        }
                     };
 
                     await _resend.EmailSendAsync(message);
@@ -1238,9 +1254,11 @@ namespace MemberOrgApi.Services
                                 </div>
                                 <div class='footer'>
                                     <p><strong>Birmingham Committee on Foreign Relations</strong></p>
+                                    <p style='margin:4px 0;'>Birmingham, AL</p>
                                     <p>© 2025 BCFR. All rights reserved.</p>
                                     <p>You received this email as a member of BCFR</p>
                                     <p><a href='" + frontendBaseUrl + @"'>Visit Our Website</a> | <a href='mailto:info@birminghamforeignrelations.org'>Contact Us</a></p>
+                                    <p style='margin-top:12px;font-size:12px;color:#9CA3AF;'>To unsubscribe, reply to this email with &quot;Unsubscribe&quot; in the subject line.</p>
                                 </div>
                             </div>
                         </div>
@@ -1274,7 +1292,12 @@ Best regards,
 The BCFR Team
 
 Birmingham Committee on Foreign Relations
-© 2025 BCFR. All rights reserved.";
+Birmingham, AL
+© 2025 BCFR. All rights reserved.
+
+To unsubscribe, reply to this email with ""Unsubscribe"" in the subject line.";
+
+                var unsubscribeEmail = _configuration["Resend:UnsubscribeEmail"] ?? "admin@birminghamforeignrelations.org";
 
                 var message = new EmailMessage
                 {
@@ -1282,7 +1305,11 @@ Birmingham Committee on Foreign Relations
                     To = toEmail,
                     Subject = "BCFR Event Invitation: " + eventTitle,
                     HtmlBody = htmlBody,
-                    TextBody = textBody
+                    TextBody = textBody,
+                    Headers = new Dictionary<string, string>
+                    {
+                        { "List-Unsubscribe", $"<mailto:{unsubscribeEmail}?subject=Unsubscribe>" }
+                    }
                 };
 
                 await _resend.EmailSendAsync(message);

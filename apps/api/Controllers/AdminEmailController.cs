@@ -155,7 +155,9 @@ namespace MemberOrgApi.Controllers
           {bodyHtml}
         </div>
         <div class='footer'>
-          <p><strong>BCFR</strong> &middot; This message was sent by the administrators.</p>
+          <p><strong>Birmingham Committee on Foreign Relations</strong></p>
+          <p style='margin:4px 0'>Birmingham, AL</p>
+          <p style='margin:8px 0 0 0;font-size:11px;color:#9CA3AF'>To unsubscribe, reply to this email with &quot;Unsubscribe&quot; in the subject line.</p>
         </div>
       </div>
     </div>

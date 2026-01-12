@@ -265,7 +265,9 @@ namespace MemberOrgApi.Controllers
               <p style='color:#6b7280;font-size:14px'>Calendar: {icsUrl}</p>
             </div>
             <div style='background:#F5F2ED;color:#6b7280;padding:16px;text-align:center;font-size:12px'>
-              Birmingham Committee on Foreign Relations
+              <p style='margin:0 0 4px 0'>Birmingham Committee on Foreign Relations</p>
+              <p style='margin:0 0 4px 0'>Birmingham, AL</p>
+              <p style='margin:8px 0 0 0;font-size:11px;color:#9CA3AF'>To unsubscribe, reply to this email with &quot;Unsubscribe&quot; in the subject line.</p>
             </div>
           </div>
         </body>
