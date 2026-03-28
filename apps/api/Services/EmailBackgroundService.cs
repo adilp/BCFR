@@ -27,6 +27,9 @@ public class EmailBackgroundService : BackgroundService
         var intervalMs = _configuration.GetValue<int>("EmailQueue:ProcessingIntervalMs", 10_000);
         _logger.LogInformation("Email background service started. Interval: {Interval}ms", intervalMs);
 
+        // Ensure monthly billing report job exists
+        await EnsureMonthlyBillingReportJobAsync(stoppingToken);
+
         while (!stoppingToken.IsCancellationRequested)
         {
             try
@@ -51,6 +54,47 @@ public class EmailBackgroundService : BackgroundService
             {
                 // shutting down
             }
+        }
+    }
+
+    private async Task EnsureMonthlyBillingReportJobAsync(CancellationToken ct)
+    {
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            var exists = await db.ScheduledEmailJobs
+                .AnyAsync(j => j.JobType == "MonthlyBillingReport" && j.EntityType == "Subscription" && j.Status == "Active", ct);
+
+            if (!exists)
+            {
+                // Schedule for the 1st of next month at 9am Central
+                var central = TimeZoneInfo.FindSystemTimeZoneById("America/Chicago");
+                var nowCentral = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, central);
+                var firstOfNextMonth = new DateTime(nowCentral.Year, nowCentral.Month, 1, 9, 0, 0).AddMonths(1);
+                var scheduledUtc = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(firstOfNextMonth, DateTimeKind.Unspecified), central);
+
+                db.ScheduledEmailJobs.Add(new ScheduledEmailJob
+                {
+                    Id = Guid.NewGuid(),
+                    JobType = "MonthlyBillingReport",
+                    EntityType = "Subscription",
+                    EntityId = "system",
+                    ScheduledFor = scheduledUtc,
+                    RecurrenceRule = "MONTHLY",
+                    Status = "Active",
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                });
+
+                await db.SaveChangesAsync(ct);
+                _logger.LogInformation("Created monthly billing report scheduled job for {Date}", firstOfNextMonth);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not seed monthly billing report job (will retry next startup)");
         }
     }
 
@@ -98,6 +142,12 @@ public class EmailBackgroundService : BackgroundService
                         {
                             // Back-compat: treat unknown as non-RSVP reminder
                             await CreateEventRsvpDeadlineReminderEmailsFromJob(db, job, tokenService, config, ct);
+                        }
+                        break;
+                    case "Subscription":
+                        if (job.JobType == "MonthlyBillingReport")
+                        {
+                            await CreateMonthlyBillingReportAsync(db, ct);
                         }
                         break;
                     default:
@@ -343,6 +393,172 @@ public class EmailBackgroundService : BackgroundService
         </body>
         </html>";
     }
+    private async Task CreateMonthlyBillingReportAsync(AppDbContext db, CancellationToken ct)
+    {
+        var now = DateTime.UtcNow;
+        var central = TimeZoneInfo.FindSystemTimeZoneById("America/Chicago");
+        var thirtyDaysOut = now.AddDays(30);
+
+        // 1. Users with no active subscription (no record at all, or cancelled/expired)
+        var usersWithActiveSub = await db.MembershipSubscriptions
+            .Where(s => s.Status == "active")
+            .Select(s => s.UserId)
+            .ToListAsync(ct);
+
+        var usersWithoutSub = await db.Users
+            .Where(u => u.IsActive && !usersWithActiveSub.Contains(u.Id))
+            .OrderBy(u => u.LastName).ThenBy(u => u.FirstName)
+            .ToListAsync(ct);
+
+        // 2. Upcoming Stripe renewals (next 30 days, real Stripe customers)
+        var upcomingStripe = await db.MembershipSubscriptions
+            .Include(s => s.User)
+            .Where(s => s.Status == "active"
+                && !s.StripeCustomerId.StartsWith("CHECK_")
+                && s.NextBillingDate >= now && s.NextBillingDate <= thirtyDaysOut)
+            .OrderBy(s => s.NextBillingDate)
+            .ToListAsync(ct);
+
+        // 3. Upcoming check renewals (next 30 days)
+        var upcomingCheck = await db.MembershipSubscriptions
+            .Include(s => s.User)
+            .Where(s => s.Status == "active"
+                && s.StripeCustomerId.StartsWith("CHECK_")
+                && s.NextBillingDate >= now && s.NextBillingDate <= thirtyDaysOut)
+            .OrderBy(s => s.NextBillingDate)
+            .ToListAsync(ct);
+
+        // Build HTML sections
+        string BuildBillingRow(MembershipSubscription s)
+        {
+            var billingDate = TimeZoneInfo.ConvertTimeFromUtc(s.NextBillingDate, central);
+            return $@"<tr>
+                <td style='padding:8px 12px;border-bottom:1px solid #e5e7eb'>{s.User.FirstName} {s.User.LastName}</td>
+                <td style='padding:8px 12px;border-bottom:1px solid #e5e7eb'>{s.User.Email}</td>
+                <td style='padding:8px 12px;border-bottom:1px solid #e5e7eb'>{s.MembershipTier}</td>
+                <td style='padding:8px 12px;border-bottom:1px solid #e5e7eb'>${s.Amount:F2}</td>
+                <td style='padding:8px 12px;border-bottom:1px solid #e5e7eb'>{billingDate:MMM d, yyyy}</td>
+            </tr>";
+        }
+
+        string BuildBillingTable(string title, string color, List<MembershipSubscription> items, string emptyMessage)
+        {
+            var rows = items.Count > 0
+                ? string.Join("\n", items.Select(BuildBillingRow))
+                : $"<tr><td colspan='5' style='padding:12px;text-align:center;color:#6b7280'>{emptyMessage}</td></tr>";
+
+            return $@"
+            <div style='margin-bottom:24px'>
+                <h2 style='font-size:16px;color:{color};margin:0 0 8px 0'>{title} ({items.Count})</h2>
+                <table style='width:100%;border-collapse:collapse;font-size:14px'>
+                    <thead>
+                        <tr style='background:#f9fafb'>
+                            <th style='padding:8px 12px;text-align:left;border-bottom:2px solid #e5e7eb'>Name</th>
+                            <th style='padding:8px 12px;text-align:left;border-bottom:2px solid #e5e7eb'>Email</th>
+                            <th style='padding:8px 12px;text-align:left;border-bottom:2px solid #e5e7eb'>Tier</th>
+                            <th style='padding:8px 12px;text-align:left;border-bottom:2px solid #e5e7eb'>Amount</th>
+                            <th style='padding:8px 12px;text-align:left;border-bottom:2px solid #e5e7eb'>Renewal Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>{rows}</tbody>
+                </table>
+            </div>";
+        }
+
+        // No-subscription section uses a simpler table (no tier/amount/date)
+        var noSubRows = usersWithoutSub.Count > 0
+            ? string.Join("\n", usersWithoutSub.Select(u =>
+                $@"<tr>
+                    <td style='padding:8px 12px;border-bottom:1px solid #e5e7eb'>{u.FirstName} {u.LastName}</td>
+                    <td style='padding:8px 12px;border-bottom:1px solid #e5e7eb'>{u.Email}</td>
+                    <td style='padding:8px 12px;border-bottom:1px solid #e5e7eb'>{u.Phone ?? "-"}</td>
+                    <td style='padding:8px 12px;border-bottom:1px solid #e5e7eb'>{TimeZoneInfo.ConvertTimeFromUtc(u.CreatedAt, central):MMM d, yyyy}</td>
+                </tr>"))
+            : "<tr><td colspan='4' style='padding:12px;text-align:center;color:#6b7280'>All members have an active subscription</td></tr>";
+
+        var noSubSection = $@"
+            <div style='margin-bottom:24px'>
+                <h2 style='font-size:16px;color:#dc2626;margin:0 0 8px 0'>No Active Subscription ({usersWithoutSub.Count})</h2>
+                <p style='font-size:13px;color:#6b7280;margin:0 0 8px 0'>Members without a current payment on record</p>
+                <table style='width:100%;border-collapse:collapse;font-size:14px'>
+                    <thead>
+                        <tr style='background:#f9fafb'>
+                            <th style='padding:8px 12px;text-align:left;border-bottom:2px solid #e5e7eb'>Name</th>
+                            <th style='padding:8px 12px;text-align:left;border-bottom:2px solid #e5e7eb'>Email</th>
+                            <th style='padding:8px 12px;text-align:left;border-bottom:2px solid #e5e7eb'>Phone</th>
+                            <th style='padding:8px 12px;text-align:left;border-bottom:2px solid #e5e7eb'>Joined</th>
+                        </tr>
+                    </thead>
+                    <tbody>{noSubRows}</tbody>
+                </table>
+            </div>";
+
+        var stripeSection = BuildBillingTable("Upcoming Stripe Renewals (Next 30 Days)", "#4263EB", upcomingStripe, "No upcoming Stripe renewals");
+        var checkSection = BuildBillingTable("Upcoming Check Renewals (Next 30 Days)", "#1976d2", upcomingCheck, "No upcoming check renewals");
+
+        var reportDate = TimeZoneInfo.ConvertTimeFromUtc(now, central);
+        var htmlBody = $@"<!DOCTYPE html>
+        <html>
+        <head><meta charset='utf-8' /><title>Monthly Billing Report</title></head>
+        <body style='font-family: -apple-system, BlinkMacSystemFont, Inter, Segoe UI, Roboto, sans-serif; background: #fdf8f1; padding: 24px; color: #212529;'>
+          <div style='max-width:700px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.07)'>
+            <div style='background:#6B3AA0;color:#fff;padding:20px'>
+              <h1 style='margin:0;font-size:22px'>Monthly Billing Report</h1>
+              <p style='margin:4px 0 0 0;opacity:0.85;font-size:14px'>{reportDate:MMMM d, yyyy}</p>
+            </div>
+            <div style='padding:24px'>
+              {noSubSection}
+              {stripeSection}
+              {checkSection}
+            </div>
+            <div style='background:#F5F2ED;color:#6b7280;padding:16px;text-align:center;font-size:12px'>
+              <p style='margin:0'>Birmingham Committee on Foreign Relations — Admin Report</p>
+            </div>
+          </div>
+        </body>
+        </html>";
+
+        // Send to all admins
+        var admins = await db.Users.Where(u => u.Role == "Admin" && u.IsActive).ToListAsync(ct);
+        if (admins.Count == 0)
+        {
+            _logger.LogWarning("No active admins found for monthly billing report");
+            return;
+        }
+
+        var campaign = new EmailCampaign
+        {
+            Id = Guid.NewGuid(),
+            Name = $"Monthly Billing Report - {reportDate:MMMM yyyy}",
+            Type = "BillingReport",
+            Status = "Active",
+            TotalRecipients = admins.Count,
+            CreatedAt = DateTime.UtcNow
+        };
+        db.EmailCampaigns.Add(campaign);
+
+        foreach (var admin in admins)
+        {
+            db.EmailQueue.Add(new EmailQueueItem
+            {
+                Id = Guid.NewGuid(),
+                CampaignId = campaign.Id,
+                RecipientEmail = admin.Email,
+                RecipientName = $"{admin.FirstName} {admin.LastName}",
+                Subject = $"BCFR Billing Report — {reportDate:MMMM yyyy}",
+                HtmlBody = htmlBody,
+                Status = "Pending",
+                Priority = 1,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            });
+        }
+
+        await db.SaveChangesAsync(ct);
+        _logger.LogInformation("Queued monthly billing report to {Count} admin(s). No subscription: {NoSub}, Stripe upcoming: {Stripe}, Check upcoming: {Check}",
+            admins.Count, usersWithoutSub.Count, upcomingStripe.Count, upcomingCheck.Count);
+    }
+
     private async Task ProcessQueueAsync(AppDbContext db, IEmailService emailService, CancellationToken ct)
     {
         var batchSize = _configuration.GetValue<int>("EmailQueue:BatchSize", 10);
