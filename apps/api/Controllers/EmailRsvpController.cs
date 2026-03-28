@@ -266,8 +266,8 @@ namespace MemberOrgApi.Controllers
             </div>
             <div style='background:#F5F2ED;color:#6b7280;padding:16px;text-align:center;font-size:12px'>
               <p style='margin:0 0 4px 0'>Birmingham Committee on Foreign Relations</p>
-              <p style='margin:0 0 4px 0'>Birmingham, AL</p>
-              <p style='margin:8px 0 0 0;font-size:11px;color:#9CA3AF'>To unsubscribe, reply to this email with &quot;Unsubscribe&quot; in the subject line.</p>
+              <p style='margin:0 0 4px 0'>2001 Park Pl, Suite 450, Birmingham, Alabama 35203, US</p>
+              <p style='margin:8px 0 0 0;font-size:11px;color:#9CA3AF'><a href='{apiBase}/unsubscribe' style='color:#9CA3AF'>Unsubscribe</a> from these emails</p>
             </div>
           </div>
         </body>

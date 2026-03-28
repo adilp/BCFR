@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using MemberOrgApi.Services;
 using MemberOrgApi.Models;
@@ -18,12 +19,14 @@ namespace MemberOrgApi.Controllers
     {
         private readonly IEmailService _emailService;
         private readonly IEmailQueueService _emailQueueService;
+        private readonly IConfiguration _configuration;
         private readonly ILogger<AdminEmailController> _logger;
 
-        public AdminEmailController(IEmailService emailService, IEmailQueueService emailQueueService, ILogger<AdminEmailController> logger)
+        public AdminEmailController(IEmailService emailService, IEmailQueueService emailQueueService, IConfiguration configuration, ILogger<AdminEmailController> logger)
         {
             _emailService = emailService;
             _emailQueueService = emailQueueService;
+            _configuration = configuration;
             _logger = logger;
         }
 
@@ -124,8 +127,10 @@ namespace MemberOrgApi.Controllers
                 ? content
                 : System.Net.WebUtility.HtmlEncode(content).Replace("\n", "<br/>");
 
+            var apiBaseUrl = _configuration["App:ApiUrl"] ?? "http://localhost:5001/api";
+            var unsubscribeUrl = $"{apiBaseUrl}/unsubscribe";
+
             return $@"<!DOCTYPE html>
-<!DOCTYPE html>
 <html>
 <head>
   <meta charset='utf-8' />
@@ -142,7 +147,6 @@ namespace MemberOrgApi.Controllers
     .footer {{ background: #F5F2ED; color: #6b7280; padding: 16px; text-align: center; font-size: 12px; }}
     a.button {{ background:#4263EB; color:#fff; padding:12px 18px; border-radius:8px; text-decoration:none; display:inline-block; }}
   </style>
-  <!-- Branding: BCFR purple header, light background, consistent typography -->
   </head>
   <body>
     <div class='wrapper'>
@@ -156,8 +160,8 @@ namespace MemberOrgApi.Controllers
         </div>
         <div class='footer'>
           <p><strong>Birmingham Committee on Foreign Relations</strong></p>
-          <p style='margin:4px 0'>Birmingham, AL</p>
-          <p style='margin:8px 0 0 0;font-size:11px;color:#9CA3AF'>To unsubscribe, reply to this email with &quot;Unsubscribe&quot; in the subject line.</p>
+          <p style='margin:4px 0'>2001 Park Pl, Suite 450, Birmingham, Alabama 35203, US</p>
+          <p style='margin:8px 0 0 0;font-size:11px;color:#9CA3AF'><a href='{unsubscribeUrl}' style='color:#9CA3AF'>Unsubscribe</a> from these emails</p>
         </div>
       </div>
     </div>

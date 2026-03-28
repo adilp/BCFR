@@ -197,7 +197,7 @@ function UserManagement() {
                 <th>Email</th>
                 <th>Phone</th>
                 <th>Role</th>
-                <th>Membership</th>
+                <th>Next Billing</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
@@ -234,14 +234,14 @@ function UserManagement() {
                   </td>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      {user.membershipTier ? (
+                      {user.nextBillingDate && user.subscriptionStatus === 'active' ? (
                         <>
-                          <span>{user.membershipTier}</span>
+                          <span>{formatDateForDisplay(user.nextBillingDate, { format: 'short' })}</span>
                           {user.stripeCustomerId?.startsWith('CHECK_') && (
-                            <span 
-                              className="badge" 
-                              style={{ 
-                                backgroundColor: '#e3f2fd', 
+                            <span
+                              className="badge"
+                              style={{
+                                backgroundColor: '#e3f2fd',
                                 color: '#1976d2',
                                 padding: '2px 6px',
                                 borderRadius: '4px',
@@ -254,7 +254,7 @@ function UserManagement() {
                           )}
                         </>
                       ) : (
-                        '-'
+                        <span style={{ color: '#9ca3af' }}>N/A</span>
                       )}
                     </div>
                   </td>
