@@ -163,7 +163,9 @@ public class EmailBackgroundService : BackgroundService
                 }
                 else
                 {
-                    job.NextRunDate = CalculateNextRun(job.RecurrenceRule!, now);
+                    var nextRun = CalculateNextRun(job.RecurrenceRule!, job.NextRunDate ?? job.ScheduledFor);
+                    job.NextRunDate = nextRun;
+                    job.ScheduledFor = nextRun ?? job.ScheduledFor;
                 }
                 job.UpdatedAt = DateTime.UtcNow;
             }
